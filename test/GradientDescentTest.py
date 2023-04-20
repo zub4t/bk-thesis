@@ -8,7 +8,6 @@ sys.path.insert(0,os.path.join(cwd,'..','ThirdParties/SGD'))
 import unittest
 from GradientDescent import GradientDescent 
 from Measurement import Measurement
-from SGD import SGD as sgd
 from Util import location_gradient,location_obj_func 
 from scipy.optimize import minimize
 class TestGradientDescent(unittest.TestCase):
