@@ -2,11 +2,15 @@ import math
 from scipy.optimize import minimize
 import numpy as np
 from more_itertools import distinct_combinations
-arr_ap = ['ap_1', 'ap_2', 'ap_3', 'ap_4', 'ap_5']
+arr_ap = ['ap_1', 'ap_2', 'ap_3', 'ap_4', 'ap_5','ap_6','ap_7','ap_8','ap_9','ap_10','ap_11','ap_12']
 def calculate_distance(location_1, location_2):
-    x1, y1, z1 = location_1['x'], location_1['y'], location_1['z']
-    x2, y2, z2 = location_2['x'], location_2['y'], location_2['z']
-    distance = math.sqrt((x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2)
+    try:
+        x1, y1, z1 = round(location_1['x'],4), round(location_1['y'],4), round(location_1['z'],4)
+        x2, y2, z2 = round(location_2['x'],4), round(location_2['y'],4), round(location_2['z'],4)
+        distance = math.sqrt((x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2)
+    except OverflowError:
+        print("Numerical result out of range")
+        return None 
     return distance
 def calculate_distance_2D(location_1, location_2):
     x1, y1 = location_1['x'], location_1['y']
@@ -33,14 +37,14 @@ def location_gradient(target, measurements):
     return np.array(list(grad.values()))
 
 def measurements_to_location(measurements):
-        initial_guess = np.random.uniform(10,-10,3)
+        initial_guess = np.array([0,0,0])
         # Replace with your initial guess for the location
-                
+        # Define the bounds for the user's location
+        bounds = ((0, 10), (0, 6), (0, 4))       
        # initial_guess= np.array([0,0,0])
-        result = minimize(location_obj_func, initial_guess, args=(measurements,), method='Powell', jac=location_gradient, options={'disp': True, 'maxiter': 5000})
+        result = minimize(location_obj_func, initial_guess, args=(measurements,), method='L-BFGS-B', jac=location_gradient, options={'disp': True, 'maxiter': 500})
 
         optimal_location = {'x': result.x[0], 'y': result.x[1], 'z': result.x[2]}
-        print(f'optimal location : {optimal_location}')
         return optimal_location
 
 def generate_subgroups(group_size):

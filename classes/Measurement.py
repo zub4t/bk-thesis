@@ -16,6 +16,8 @@ class Measurement:
         self.std_dev = std_dev
         self.responder_location = responder_location
         self.ap_location = ap_location
+    def __repr__(self):
+        return (f"Timestamp: {self.timestamp:.1f}, BSSID: {self.bssid}, RSSI: {self.rssi:.2f}, Distance: {self.distance:.2f}, Std Dev: {self.std_dev:.2f}, Responder Location: {self.responder_location}, AP Location: {self.ap_location}")
 class Synthetic:
     def __init__(self):
         self.person_path = []
@@ -33,6 +35,7 @@ class Synthetic:
             for ap_name, ap_location in ap_locations.items():
                 rssi = random.uniform(*rssi_range)
                 distance = calculate_distance(person_location, ap_location)
+                distance_plus_noise = distance + random.uniform(-1.0,1.0) 
                 std_dev = random.uniform(*std_dev_range)
                 measurement = Measurement(timestamp, ap_name, rssi, distance, std_dev, person_location, ap_location)
                 measurements.append(measurement)
@@ -97,10 +100,4 @@ class Synthetic:
             self.person_path.append(new_point)
 
 
-num_points = int(4 * 60 / 0.3)  # Assuming 4 minutes of path with a 0.3 seconds interval between points
-side_length = 2
-s = Synthetic()
-side_length = 2
-s.square_path(num_points, side_length)
-s.visualize_person_path()
 

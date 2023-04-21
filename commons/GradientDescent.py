@@ -10,16 +10,17 @@ class GradientDescent:
         self.tolerance = tolerance
 
 
-    def gradient(target, measurements):
+    def gradient(self,measurements,target):
         grad = {'x': 0, 'y': 0, 'z': 0}
         epsilon = 1e-10
         for m in measurements:
-            dist = calculate_distance(target, m.responder_location)
-            dist = max(dist, epsilon)  # Avoid division by zero
-            error = m.distance - dist
-            grad['x'] += (error / dist) * (target['x'] - m.responder_location['x'])
-            grad['y'] += (error / dist) * (target['y'] - m.responder_location['y'])
-            grad['z'] += (error / dist) * (target['z'] - m.responder_location['z'])
+            dist = calculate_distance(target, m.ap_location)
+            if(dist!=None):
+                dist = max(dist, epsilon)  # Avoid division by zero
+                error = m.distance - dist
+                grad['x'] += (error / dist) * (target['x'] - m.ap_location['x'])
+                grad['y'] += (error / dist) * (target['y'] - m.ap_location['y'])
+                grad['z'] += (error / dist) * (target['z'] - m.ap_location['z'])
         return grad
 
 
@@ -27,8 +28,10 @@ class GradientDescent:
     def cost_function(self, measurements, target):
         cost = 0
         for m in measurements:
-            dist = calculate_distance(target, m.responder_location)
-            error = m.distance - dist
+            dist = calculate_distance(target, m.ap_location)
+            error=1000000
+            if(dist != None):
+                error = m.distance - dist
             cost += error**2
         return cost
 
@@ -36,7 +39,6 @@ class GradientDescent:
         target = initial_guess.copy()
         prev_cost = self.cost_function(measurements, target)
         improvement = float('inf')
-
         for i in range(self.max_iterations):
             grad = self.gradient(measurements, target)
             target['x'] += self.learning_rate * grad['x']
