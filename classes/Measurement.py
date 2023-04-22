@@ -1,10 +1,11 @@
 import random
+import csv
 from collections import namedtuple
 import sys
 import os
 cwd = os.getcwd()
 sys.path.insert(0,os.path.join(cwd,'..','commons'))
-from Util import calculate_distance
+from Util import calculate_distance,interpolate_points
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 class Measurement:
@@ -18,9 +19,74 @@ class Measurement:
         self.ap_location = ap_location
     def __repr__(self):
         return (f"Timestamp: {self.timestamp:.1f}, BSSID: {self.bssid}, RSSI: {self.rssi:.2f}, Distance: {self.distance:.2f}, Std Dev: {self.std_dev:.2f}, Responder Location: {self.responder_location}, AP Location: {self.ap_location}")
+    
+    @staticmethod
+    def from_folder_to_list(folder_path, ap_locations):
+        measurements = []
+        
+        for file_name in os.listdir(folder_path):
+            file_path = os.path.join(folder_path, file_name)
+            if os.path.isfile(file_path):
+                with open(file_path, 'r') as csv_file:
+                    csv_reader = csv.reader(csv_file)
+                    next(csv_reader)  # Skip the header row
+
+                    for row in csv_reader:
+                        timestamp, bssid, rssi, distance, std_dev = row
+                        ap_location = next((ap for ap in ap_locations if ap.BSSID == bssid), None)
+                        responder_location = {'x': 0, 'y': 0, 'z': 0}
+
+                        measurement = Measurement(
+                            timestamp=int(timestamp),
+                            bssid=bssid,
+                            rssi=int(rssi),
+                            distance=float(distance),
+                            std_dev=float(std_dev),
+                            responder_location=responder_location,
+                            ap_location=ap_location
+                        )
+                        measurements.append(measurement)
+        
+        return measurements
+    @staticmethod
+    def from_file_to_list(file_path, ap_locations):
+        measurements = []
+        with open(file_path, 'r') as csv_file:
+            csv_reader = csv.reader(csv_file)
+            for row in csv_reader:
+                timestamp, bssid, rssi, distance, std_dev = row
+                ap_location = next((ap for ap in ap_locations if ap.BSSID == bssid), None)
+                responder_location = {'x': 0, 'y': 0, 'z': 0}
+                
+                measurement = Measurement(
+                    timestamp=int(timestamp),
+                    bssid=bssid,
+                    rssi=int(rssi),
+                    distance=float(distance),
+                    std_dev=float(std_dev),
+                    responder_location=responder_location,
+                    ap_location=ap_location
+                )
+                measurements.append(measurement)
+        
+        return measurements
+
+
 class Synthetic:
     def __init__(self):
         self.person_path = []
+        self.points_exp = [
+                {'x': 1, 'y': 0.80, 'z': 1.60},
+                {'x': 8, 'y': 0.80, 'z': 1.60},
+                {'x': 8, 'y': 4.80, 'z': 1.60},
+                {'x': 1, 'y': 4.80, 'z': 1.60},
+                {'x': 1, 'y': 1.80, 'z': 1.60},
+                {'x': 8, 'y': 1.80, 'z': 1.60},
+                {'x': 8, 'y': 3.80, 'z': 1.60},
+                {'x': 1, 'y': 3.80, 'z': 1.60},
+                {'x': 1, 'y': 2.80, 'z': 1.60},
+                {'x': 8, 'y': 2.80, 'z': 1.60},
+                ]
 
     def generate_synthetic_data(self,num_aps, room_size=(10, 6, 4), rssi_range=(-100, -30), std_dev_range=(1, 5), total_time=4*60, time_interval=0.3):
         # Generate random AP locations
@@ -35,14 +101,14 @@ class Synthetic:
             for ap_name, ap_location in ap_locations.items():
                 rssi = random.uniform(*rssi_range)
                 distance = calculate_distance(person_location, ap_location)
-                distance_plus_noise = distance + random.uniform(-1.0,1.0) 
+                distance_plus_noise = distance + random.uniform(-5.0,5.0) 
                 std_dev = random.uniform(*std_dev_range)
                 measurement = Measurement(timestamp, ap_name, rssi, distance, std_dev, person_location, ap_location)
                 measurements.append(measurement)
 
         return measurements
 
-    def visualize_person_path(self):
+    def generate_person_path(self):
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
 
@@ -52,13 +118,15 @@ class Synthetic:
 
         ax.scatter(x, y, z, c='r', marker='o')
         
+        ax.set_xlim([0, 10])
+        ax.set_ylim([0, 6])
+        ax.set_zlim([0, 4])
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
 
         plt.title("Person's Path")
-        plt.show()
-
+        return ax
 
 
     def generate_random_path(self,num_points, room_size=(10, 6, 4), max_distance=0.2):
@@ -99,5 +167,6 @@ class Synthetic:
             new_point = next_square_point(self.person_path[-1], side_length / points_per_side, direction)
             self.person_path.append(new_point)
 
-
-
+    def generate_exp_path(self,steps):
+        interpolated_path = interpolate_points(self.points_exp, steps)
+        self.person_path = interpolated_path

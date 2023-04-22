@@ -60,3 +60,22 @@ def group_measurements_by_bssid(measurements):
             grouped_measurements[bssid] = []
         grouped_measurements[bssid].append(measurement)
     return grouped_measurements
+
+
+
+
+def interpolate_points(points, steps):
+    interpolated_points = []
+
+    for i in range(len(points) - 1):
+        start_point = np.array([points[i]['x'], points[i]['y'], points[i]['z']])
+        end_point = np.array([points[i+1]['x'], points[i+1]['y'], points[i+1]['z']])
+        for t in range(steps):
+            alpha = t / (steps - 1)
+            interpolated_point = start_point * (1 - alpha) + end_point * alpha
+            interpolated_points.append({'x': interpolated_point[0], 'y': interpolated_point[1], 'z': interpolated_point[2]})
+
+    return interpolated_points
+
+
+

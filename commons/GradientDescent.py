@@ -24,7 +24,6 @@ class GradientDescent:
         return grad
 
 
-
     def cost_function(self, measurements, target):
         cost = 0
         for m in measurements:
