@@ -17,8 +17,21 @@ class Measurement:
         self.std_dev = std_dev
         self.responder_location = responder_location
         self.ap_location = ap_location
+        self.person_path = []
+        self.points_exp = [
+                {'x': 1, 'y': 0.80, 'z': 1.60},
+                {'x': 8, 'y': 0.80, 'z': 1.60},
+                {'x': 8, 'y': 4.80, 'z': 1.60},
+                {'x': 1, 'y': 4.80, 'z': 1.60},
+                {'x': 1, 'y': 1.80, 'z': 1.60},
+                {'x': 8, 'y': 1.80, 'z': 1.60},
+                {'x': 8, 'y': 3.80, 'z': 1.60},
+                {'x': 1, 'y': 3.80, 'z': 1.60},
+                {'x': 1, 'y': 2.80, 'z': 1.60},
+                {'x': 8, 'y': 2.80, 'z': 1.60},
+                ]
     def __repr__(self):
-        return (f"Timestamp: {self.timestamp:.1f}, BSSID: {self.bssid}, RSSI: {self.rssi:.2f}, Distance: {self.distance:.2f}, Std Dev: {self.std_dev:.2f}, Responder Location: {self.responder_location}, AP Location: {self.ap_location}")
+        return (f"Distance: {self.distance:.2f}\n")
     
     @staticmethod
     def from_folder_to_list(folder_path, ap_locations):
@@ -43,7 +56,7 @@ class Measurement:
                             distance=float(distance),
                             std_dev=float(std_dev),
                             responder_location=responder_location,
-                            ap_location=ap_location
+                            ap_location={'x': ap_location.X,'y':ap_location.Y,'z':ap_location.Z}
                         )
                         measurements.append(measurement)
         
@@ -71,29 +84,49 @@ class Measurement:
         
         return measurements
 
+    def generate_exp_path(self,steps):
+        interpolated_path = interpolate_points(self.points_exp, steps)
+        self.person_path = interpolated_path
+
+
+    def generate_person_path(self):
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        x = [point['x'] for point in self.person_path]
+        y = [point['y'] for point in self.person_path]
+        z = [point['z'] for point in self.person_path]
+
+        ax.scatter(x, y, z, c='r', marker='o')
+        
+        ax.set_xlim([0, 10])
+        ax.set_ylim([0, 6])
+        ax.set_zlim([0, 4])
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+
+        plt.title("Person's Path")
+
+        def update(new_points, color='b'):
+            for point in new_points:
+                ax.scatter(point['x'], point['y'], point['z'], c=color, marker='x')
+                plt.draw()
+                plt.pause(1)
+
+        return update
+
 
 class Synthetic:
     def __init__(self):
         self.person_path = []
-        self.points_exp = [
-                {'x': 1, 'y': 0.80, 'z': 1.60},
-                {'x': 8, 'y': 0.80, 'z': 1.60},
-                {'x': 8, 'y': 4.80, 'z': 1.60},
-                {'x': 1, 'y': 4.80, 'z': 1.60},
-                {'x': 1, 'y': 1.80, 'z': 1.60},
-                {'x': 8, 'y': 1.80, 'z': 1.60},
-                {'x': 8, 'y': 3.80, 'z': 1.60},
-                {'x': 1, 'y': 3.80, 'z': 1.60},
-                {'x': 1, 'y': 2.80, 'z': 1.60},
-                {'x': 8, 'y': 2.80, 'z': 1.60},
-                ]
 
-    def generate_synthetic_data(self,num_aps, room_size=(10, 6, 4), rssi_range=(-100, -30), std_dev_range=(1, 5), total_time=4*60, time_interval=0.3):
+    def generate_synthetic_data(self,num_aps,ap_locations={},room_size=(10, 6, 4), rssi_range=(-100, -30), std_dev_range=(1, 5), total_time=4*60, time_interval=0.3):
         # Generate random AP locations
-        ap_locations = {}
-        for i in range(1, num_aps + 1):
-            ap_locations[f"ap_{i}"] = {'x': random.uniform(0, room_size[0]), 'y': random.uniform(0, room_size[1]), 'z': random.uniform(0, room_size[2])}
-
+        if(len(ap_locations)==0):
+            for i in range(1, num_aps + 1):
+                ap_locations[f"ap_{i}"] = {'x': random.uniform(0, room_size[0]), 'y': random.uniform(0, room_size[1]), 'z': random.uniform(0, room_size[2])}
+    
         # Generate measurements
         measurements = []
         for i, person_location in enumerate(self.person_path):
@@ -167,6 +200,3 @@ class Synthetic:
             new_point = next_square_point(self.person_path[-1], side_length / points_per_side, direction)
             self.person_path.append(new_point)
 
-    def generate_exp_path(self,steps):
-        interpolated_path = interpolate_points(self.points_exp, steps)
-        self.person_path = interpolated_path

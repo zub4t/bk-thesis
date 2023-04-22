@@ -47,10 +47,10 @@ def measurements_to_location(measurements):
         optimal_location = {'x': result.x[0], 'y': result.x[1], 'z': result.x[2]}
         return optimal_location
 
-def generate_subgroups(group_size):
-    if group_size > len(arr_ap):
+def generate_subgroups(group_size,arr=arr_ap):
+    if group_size > len(arr):
         raise ValueError("Group size cannot be larger than the number of available APs.")
-    return list(distinct_combinations(arr_ap, group_size))
+    return list(distinct_combinations(arr, group_size))
 
 def group_measurements_by_bssid(measurements):
     grouped_measurements = {}
@@ -77,5 +77,89 @@ def interpolate_points(points, steps):
 
     return interpolated_points
 
+def interpolate(p1, p2, distance_ratio):
+    return {
+        'x': p1['x'] + distance_ratio * (p2['x'] - p1['x']),
+        'y': p1['y'] + distance_ratio * (p2['y'] - p1['y']),
+        'z': p1['z'] + distance_ratio * (p2['z'] - p1['z'])
+    }
+
+def generate_intermediate_points(points, step=1.0):
+    intermediate_points = [points[0]]
+    for i in range(len(points) - 1):
+        p1 = points[i]
+        p2 = points[i + 1]
+        segment_distance = calculate_distance(p1, p2)
+        num_steps = int(segment_distance // step)
+        for j in range(1, num_steps):
+            distance_ratio = j * step / segment_distance
+            intermediate_point = interpolate(p1, p2, distance_ratio)
+            intermediate_points.append(intermediate_point)
+        intermediate_points.append(p2)
+    return intermediate_points
 
 
+
+def read_timestamps(file_path):
+    timestamps = []
+    with open(file_path, 'r') as file:
+        for line in file:
+            timestamp = int(line.strip())
+            timestamps.append(timestamp)
+    return timestamps
+
+def interpolate_from_location_to_timestamp(points, timestamps, location):
+    for i in range(len(points) - 1):
+        p1 = points[i]
+        p2 = points[i + 1]
+        t1 = timestamps[i]
+        t2 = timestamps[i + 1]
+
+        d1 = calculate_distance(p1, location)
+        d2 = calculate_distance(p2, location)
+        total_distance = calculate_distance(p1, p2)
+
+        if d1 + d2 <= total_distance + 1e-6:
+            distance_ratio = d1 / (d1 + d2)
+            interpolated_timestamp = t1 + distance_ratio * (t2 - t1)
+            return int(interpolated_timestamp)
+
+    # If the location is not found between given points, use interpolation based on the first two points and timestamps
+    p1, p2 = points[0], points[1]
+    t1, t2 = timestamps[0], timestamps[1]
+    total_distance = calculate_distance(p1, p2)
+    d1 = calculate_distance(p1, location)
+    distance_ratio = d1 / total_distance
+    interpolated_timestamp = t1 + distance_ratio * (t2 - t1)
+    return int(interpolated_timestamp)
+
+
+
+def interpolate_from_timestamp_to_location(points, timestamps, target_timestamp):
+    if target_timestamp <= timestamps[0]:
+        return points[0]
+
+    if target_timestamp >= timestamps[-1]:
+        return points[-1]
+
+    for i in range(len(timestamps) - 1):
+        t1 = timestamps[i]
+        t2 = timestamps[i + 1]
+
+        if t1 <= target_timestamp <= t2:
+            p1 = points[i]
+            p2 = points[i + 1]
+            time_ratio = (target_timestamp - t1) / (t2 - t1)
+            x = p1['x'] + time_ratio * (p2['x'] - p1['x'])
+            y = p1['y'] + time_ratio * (p2['y'] - p1['y'])
+            z = p1['z'] + time_ratio * (p2['z'] - p1['z'])
+            return {'x': x, 'y': y, 'z': z}
+
+    # If the target timestamp is not found between given timestamps, use interpolation based on the first two points and timestamps
+    p1, p2 = points[0], points[1]
+    t1, t2 = timestamps[0], timestamps[1]
+    time_ratio = (target_timestamp - t1) / (t2 - t1)
+    x = p1['x'] + time_ratio * (p2['x'] - p1['x'])
+    y = p1['y'] + time_ratio * (p2['y'] - p1['y'])
+    z = p1['z'] + time_ratio * (p2['z'] - p1['z'])
+    return {'x': x, 'y': y, 'z': z}
