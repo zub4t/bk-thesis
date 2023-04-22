@@ -9,7 +9,6 @@ from LinearWeight import Func
 from Measurement import Measurement,Synthetic 
 from Util import group_measurements_by_bssid,generate_subgroups,measurements_to_location,calculate_distance
 from GradientDescent import GradientDescent
-from APLocation import APLocation
 ax = None
 def give_weight(devices: dict):
     
@@ -26,21 +25,16 @@ def give_weight(devices: dict):
 if __name__ == "__main__":
     num_points = int( 60 / 0.3)  # Assuming 4 minutes of path with a 0.3 seconds interval between points
     side_length = 8
-    ap_location = APLocation.from_file_to_list('/home/marco/Documents/NEW/AP_location.json')
-    m = Measurement.from_folder_to_list('/home/marco/Documents/raw_802.11_new/parsed/EXP_73',ap_location)
+    s = Synthetic()
+    s.square_path(num_points, side_length)
+    m = s.generate_synthetic_data(12,total_time=60)
     d = group_measurements_by_bssid(m)
     l = generate_subgroups(12)
-    """
-    s = Synthetic()
-    #s.square_path(num_points, side_length)
-    #s.generate_random_path(num_points,max_distance=4)
-    s.generate_exp_path(20)
-    m = s.generate_synthetic_data(12,total_time=60)
     z = int((4*60)//0.3)
     gd = GradientDescent(learning_rate=0.01, max_iterations=1000, tolerance=1e-5)
     j = 0
     ax = s.generate_person_path()
-    plt.show()
+
     for j in range(0,len(d['ap_1'])): 
         error_dict = {}
         pos_dict = {}
@@ -63,7 +57,6 @@ if __name__ == "__main__":
         # Add new points to the plot
         ax.scatter(pos['x'],pos['y'],pos['z'],c='g', marker='x')
     plt.show()
-    """
         
 
 
