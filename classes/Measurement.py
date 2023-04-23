@@ -34,6 +34,32 @@ class Measurement:
         return (f"Distance: {self.distance:.2f}\n")
     
     @staticmethod
+    def from_folder_to_list_uwb(folder_path, ap_locations):
+        measurements = []
+        
+        for file_name in os.listdir(folder_path):
+            file_path = os.path.join(folder_path, file_name)
+            if os.path.isfile(file_path):
+                with open(file_path, 'r') as csv_file:
+                    csv_reader = csv.reader(csv_file)
+                    for row in csv_reader:
+                        timestamp,id, distance = row
+                        ap_location = next((ap for ap in ap_locations if ap.ID == id), None)
+                        responder_location = {'x': 0, 'y': 0, 'z': 0}
+
+                        measurement = Measurement(
+                            timestamp=int(timestamp),
+                            bssid=id,
+                            rssi=int(0),
+                            distance=float(distance),
+                            std_dev=float(0),
+                            responder_location=responder_location,
+                            ap_location={'x': ap_location.X,'y':ap_location.Y,'z':ap_location.Z}
+                        )
+                        measurements.append(measurement)
+        
+        return measurements
+    @staticmethod
     def from_folder_to_list(folder_path, ap_locations):
         measurements = []
         
@@ -42,8 +68,6 @@ class Measurement:
             if os.path.isfile(file_path):
                 with open(file_path, 'r') as csv_file:
                     csv_reader = csv.reader(csv_file)
-                    next(csv_reader)  # Skip the header row
-
                     for row in csv_reader:
                         timestamp, bssid, rssi, distance, std_dev = row
                         ap_location = next((ap for ap in ap_locations if ap.BSSID == bssid), None)
@@ -112,7 +136,7 @@ class Measurement:
             for point in new_points:
                 ax.scatter(point['x'], point['y'], point['z'], c=color, marker='x')
                 plt.draw()
-                plt.pause(1)
+                plt.pause(0.01)
 
         return update
 

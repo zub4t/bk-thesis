@@ -29,15 +29,18 @@ if __name__ == "__main__":
     num_points = int( 60 / 0.3)  # Assuming 4 minutes of path with a 0.3 seconds interval between points
     side_length = 8
     ap_location = APLocation.from_file_to_list('/home/marco/Documents/NEW/AP_location.json')
-    m = Measurement.from_folder_to_list('/home/marco/Documents/raw_802.11_new/parsed/EXP_74',ap_location)
+    m = []
+    m += Measurement.from_folder_to_list_uwb('/home/marco/Documents/raw_new_uwb/UWB_0/parsed/EXP_56',ap_location)
+    m += Measurement.from_folder_to_list_uwb('/home/marco/Documents/raw_new_uwb/UWB_1/parsed/EXP_56',ap_location)
+    m += Measurement.from_folder_to_list_uwb('/home/marco/Documents/raw_new_uwb/UWB_2/parsed/EXP_56',ap_location)
     m[0].generate_exp_path(20)
     update_func = m[0].generate_person_path()
     d = group_measurements_by_bssid(m)
-    l = generate_subgroups(4, arr=list(d.keys()) )
+    l = generate_subgroups(12, arr=list(d.keys()) )
     gd = GradientDescent(learning_rate=0.01, max_iterations=1000, tolerance=1e-5)
     
 
-    timestamp_list = read_timestamps('/home/marco/Documents/raw_802.11_new/CHECKPOINT_EXP_74')
+    timestamp_list = read_timestamps('/home/marco/Documents/raw_802.11_new/CHECKPOINT_EXP_73')
     points_list = generate_intermediate_points(m[0].points_exp)
     
     # for xx in m:
@@ -56,15 +59,14 @@ if __name__ == "__main__":
                 try:
                     aux = d[ap][j]
                     aux.responder_location= interpolate_from_timestamp_to_location(points_list,timestamp_list,aux.timestamp)
-                    aux.distance = (aux.distance/1.16) - 0.63
                     measurements.append(aux)
                 except:
                     print('error')
                 
             pos = gd.train(measurements, {'x':0,'y':0,'z':0})
             # to verify the path is correct
-            # pos_dict[group] = measurements[0].responder_location
-
+            #pos_dict[group] = measurements[0].responder_location
+            pos['z'] = 1.6
             pos_dict[group] = pos
             error = calculate_distance(pos, measurements[1].responder_location)
             error_dict[group] = error
