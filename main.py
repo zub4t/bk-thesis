@@ -1,52 +1,70 @@
 import sys
 import os
-import threading
 cwd = os.getcwd()
 import matplotlib.pyplot as plt
 sys.path.insert(0,os.path.join(cwd,'classes'))
 sys.path.insert(0,os.path.join(cwd,'commons'))
-from LinearWeight import Func  
-from Measurement import Measurement,Synthetic 
+from Measurement import Measurement
+from Synthetic import Synthetic
 from Util import *
 from GradientDescent import GradientDescent
+from GradientDescentFixedZ import GradientDescentFixedZ
 from APLocation import APLocation
 import matplotlib.animation as animation
 ax = None
-
-def give_weight(devices: dict):
-    
-    """
-    Adds a weight property to each object in the devices dictionary based on their rssi value.
-
-    :param devices: Dictionary with keys as device names (strings) and values as objects with an 'rssi' property
-    """
-    func = Func()
-    for device_name, device_obj in devices.items():
-        device_obj['weight'] = func.perform(device_obj['rssi'])
-
 # Example usage
 if __name__ == "__main__":
-    num_points = int( 60 / 0.3)  # Assuming 4 minutes of path with a 0.3 seconds interval between points
-    side_length = 8
-    ap_location = APLocation.from_file_to_list('/home/marco/Documents/NEW/AP_location.json')
-    m = []
-    m += Measurement.from_folder_to_list_uwb('/home/marco/Documents/raw_new_uwb/UWB_0/parsed/EXP_56',ap_location)
-    m += Measurement.from_folder_to_list_uwb('/home/marco/Documents/raw_new_uwb/UWB_1/parsed/EXP_56',ap_location)
-    m += Measurement.from_folder_to_list_uwb('/home/marco/Documents/raw_new_uwb/UWB_2/parsed/EXP_56',ap_location)
-    m[0].generate_exp_path(20)
-    update_func = m[0].generate_person_path()
-    d = group_measurements_by_bssid(m)
-    l = generate_subgroups(12, arr=list(d.keys()) )
-    gd = GradientDescent(learning_rate=0.01, max_iterations=1000, tolerance=1e-5)
-    
 
+    print("Please choose a data option:")
+    print("1. Use Synthetic data")
+    print("2. Use 802.11mc data")
+    print("3. Use Ultra Wide Band data")
+
+    data_option = input("Enter the number of your choice: ")
+
+    if data_option == "1":
+        data_source = "Synthetic data"
+    elif data_option == "2":
+        data_source = "802.11mc data"
+    elif data_option == "3":
+        data_source = "Ultra Wide Band data"
+    else:
+        print("Invalid choice, please try again.")
+        exit()
+
+    exp_target = input("Enter the name of the experiment you want to visualize: ")
+    print("You chose to use {} and visualize the experiment {}".format(data_source, exp_target))
+    l=None
+    d=None
+    update_func= None
+    if(data_option == "1"):
+            num_points = int( 60 / 0.3)  # Assuming 4 minutes of path with a 0.3 seconds interval between points
+            side_length = 8
+            synthetic = Synthetic()
+            synthetic.square_path(num_points,side_length)
+            m = synthetic.generate_synthetic_data(12)
+            update_func= generate_person_path(20,Synthetic.real_person_path)
+            d = group_measurements_by_bssid(m)
+            l = generate_subgroups(4, arr=list(d.keys()) )
+    elif(data_option=="2"):
+            m = Measurement.read_json_file('/home/marco/Documents/site-thesis/file.json',exp_target,'802.11mc')
+            real_person_path=interpolate_points(Measurement.points_exp, 20)
+            update_func = generate_person_path(20,real_person_path)
+            print(m)
+            d = group_measurements_by_bssid(m)
+            l = generate_subgroups(8, arr=list(d.keys()) )
+    elif(data_option=="3"):     
+            m = Measurement.read_json_file('/home/marco/Documents/site-thesis/file.json',exp_target,'uwb')
+            real_person_path=interpolate_points(Measurement.points_exp, 20)
+            update_func = generate_person_path(20,real_person_path)
+            d = group_measurements_by_bssid(m)
+            l = generate_subgroups(12, arr=list(d.keys()) )
+
+
+    gd = GradientDescentFixedZ(learning_rate=0.01, max_iterations=1000, tolerance=1e-5)
     timestamp_list = read_timestamps('/home/marco/Documents/raw_802.11_new/CHECKPOINT_EXP_73')
-    points_list = generate_intermediate_points(m[0].points_exp)
+    points_list = generate_intermediate_points(Measurement.points_exp)
     
-    # for xx in m:
-    #     pos = interpolate_from_timestamp_to_location(points_list,timestamp_list,xx.timestamp)
-    #     ax.scatter(pos['x'],pos['y'],pos['z'],c='g', marker='x')
-    # plt.show()
     chosen_points = []
     cc = (len(d[list(d.keys())[1]]))
     plt.show(block=False)
@@ -64,22 +82,15 @@ if __name__ == "__main__":
                     print('error')
                 
             pos = gd.train(measurements, {'x':0,'y':0,'z':0})
-            # to verify the path is correct
-            #pos_dict[group] = measurements[0].responder_location
-            pos['z'] = 1.6
+            #pos['z'] = 1.6
             pos_dict[group] = pos
             error = calculate_distance(pos, measurements[1].responder_location)
             error_dict[group] = error
-            #print(f'predict : {pos}  real {measurements[0].responder_location}')
             print(f'{group} -- {j} --- {error}')
-            #print(measurements[0].timestamp)
         min_key = min(error_dict, key=lambda k: error_dict[k])
         min_value = error_dict[min_key]
         pos = pos_dict[min_key]
         chosen_points.append(pos)
-        #print(j,min_key, min_value,pos)
-        # Add new points to the plot
-        #ax.scatter(pos['x'],pos['y'],pos['z'],c='g', marker='x')
     update_func(chosen_points, color='b')
 
     plt.show()

@@ -1,7 +1,14 @@
 import math
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 from scipy.optimize import minimize
 import numpy as np
 from more_itertools import distinct_combinations
+import sys
+import os
+cwd = os.getcwd()
+sys.path.insert(0,os.path.join(cwd,'..','classes'))
+from Measurement import Measurement
 arr_ap = ['ap_1', 'ap_2', 'ap_3', 'ap_4', 'ap_5','ap_6','ap_7','ap_8','ap_9','ap_10','ap_11','ap_12']
 def calculate_distance(location_1, location_2):
     try:
@@ -24,7 +31,6 @@ def location_obj_func(target, measurements):
         dist = np.sqrt(np.sum((np.array(list(target.values())) - np.array(list(m.responder_location.values())))**2))
         error += (m.distance - dist)**2
     return error
-
 def location_gradient(target, measurements):
     grad = {'x': 0, 'y': 0, 'z': 0}
     target = {'x': target[0], 'y': target[1], 'z': target[2]}
@@ -55,6 +61,7 @@ def generate_subgroups(group_size,arr=arr_ap):
 def group_measurements_by_bssid(measurements):
     grouped_measurements = {}
     for measurement in measurements:
+        print(measurement)
         bssid = measurement.bssid
         if bssid not in grouped_measurements:
             grouped_measurements[bssid] = []
@@ -163,3 +170,32 @@ def interpolate_from_timestamp_to_location(points, timestamps, target_timestamp)
     y = p1['y'] + time_ratio * (p2['y'] - p1['y'])
     z = p1['z'] + time_ratio * (p2['z'] - p1['z'])
     return {'x': x, 'y': y, 'z': z}
+
+def generate_person_path(steps,real_person_path):
+    
+        
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    x = [point['x'] for point in real_person_path]
+    y = [point['y'] for point in real_person_path]
+    z = [point['z'] for point in real_person_path]
+
+    ax.scatter(x, y, z, c='r', marker='o')
+    
+    ax.set_xlim([0, 10])
+    ax.set_ylim([0, 6])
+    ax.set_zlim([0, 4])
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    plt.title("Person's Path")
+
+    def update(new_points, color='b'):
+        for point in new_points:
+            ax.scatter(point['x'], point['y'], point['z'], c=color, marker='x')
+            plt.draw()
+            plt.pause(0.001)
+
+    return update
