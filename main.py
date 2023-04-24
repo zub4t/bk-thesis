@@ -37,6 +37,7 @@ if __name__ == "__main__":
     l=None
     d=None
     update_func= None
+    func_bias= lambda x : x
     fast=False
     if(data_option == "1"):
             num_points = int( 60 / 0.3)  # Assuming 4 minutes of path with a 0.3 seconds interval between points
@@ -48,6 +49,7 @@ if __name__ == "__main__":
             d = group_measurements_by_bssid(m)
             l = generate_subgroups(4, arr=list(d.keys()) )
     elif(data_option=="2"):
+            #func_bias= lambda x: (x/1.16) - 0.63
             m = Measurement.read_json_file('/home/marco/Documents/site-thesis/file.json',exp_target,'802.11mc')
             real_person_path=interpolate_points(Measurement.points_exp, 20)
             update_func = generate_person_path(20,real_person_path)
@@ -64,36 +66,43 @@ if __name__ == "__main__":
 
     gd = GradientDescentFixedZ(learning_rate=0.01, max_iterations=1000, tolerance=1e-5)
     timestamp_list = read_timestamps(f'/home/marco/Documents/raw_802.11_new/CHECKPOINT_{exp_target}')
-    points_list = generate_intermediate_points(Measurement.points_exp)
-    
+    points_list = generate_intermediate_points(Measurement.points_exp) 
     cc = (len(d[list(d.keys())[1]]))
     plt.show(block=False)
+    prev_mean_loc_list = [{'x':0.1,'y':0.1,'z':0.1}] 
+    prev_mean_loc ={'x':0.1,'y':0.1,'z':0.1}
+    prev_timestamp=0;
+    smoothing_factor_degrees = 30
+    smoothing_factor = math.radians(smoothing_factor_degrees)
+    user_speed = 0.5
     for j in range(0,cc):
         if(fast):
             j*=20
-        error_dict = {}
-        pos_dict = {}
+        tuple_list = []
+        current_timestamp=0
         for i, group in enumerate(l):
             measurements=[]
             for ap in group:
                 try:
                     aux = d[ap][j]
                     aux.responder_location= interpolate_from_timestamp_to_location(points_list,timestamp_list,aux.timestamp)
+                    aux.distance = func_bias(aux.distance)
                     measurements.append(aux)
                 except:
                     print('error')
-                
+            current_timestamp = measurements[0].timestamp    
             pos = gd.train(measurements, {'x':0,'y':0,'z':0})
             #pos['z'] = 1.6
-            pos_dict[group] = pos
-            error = calculate_distance(pos, measurements[1].responder_location)
-            error_dict[group] = error
-            print(f'{group} -- {j} --- {error}')
-        min_key = min(error_dict, key=lambda k: error_dict[k])
-        min_value = error_dict[min_key]
-        pos = pos_dict[min_key]
-        update_func([pos], color='b')
-        plt.show(block=False)
+            tuple_list.append((group,pos))
+            print(f'{group} -- {j}')
+        subset = select_subset(tuple_list,0.5)
+        #mean_loc = mean_location(subset,current_timestamp,prev_mean_loc_list,prev_timestamp,user_speed)
+        mean_loc = mean_location_1(subset,current_timestamp,prev_mean_loc,prev_timestamp,user_speed)
+        prev_timestamp= current_timestamp
+        prev_mean_loc_list.append(mean_loc)
+        prev_mean_loc= mean_loc
+        update_func([mean_loc], color='b')
+        #plt.show(block=False)
 
         
 
