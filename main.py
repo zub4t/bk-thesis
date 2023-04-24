@@ -37,6 +37,7 @@ if __name__ == "__main__":
     l=None
     d=None
     update_func= None
+    fast=False
     if(data_option == "1"):
             num_points = int( 60 / 0.3)  # Assuming 4 minutes of path with a 0.3 seconds interval between points
             side_length = 8
@@ -52,23 +53,24 @@ if __name__ == "__main__":
             update_func = generate_person_path(20,real_person_path)
             print(m)
             d = group_measurements_by_bssid(m)
-            l = generate_subgroups(8, arr=list(d.keys()) )
+            l = generate_subgroups(4, arr=list(d.keys()) )
     elif(data_option=="3"):     
             m = Measurement.read_json_file('/home/marco/Documents/site-thesis/file.json',exp_target,'uwb')
             real_person_path=interpolate_points(Measurement.points_exp, 20)
             update_func = generate_person_path(20,real_person_path)
             d = group_measurements_by_bssid(m)
-            l = generate_subgroups(12, arr=list(d.keys()) )
-
+            l = generate_subgroups(4, arr=list(d.keys()) )
+            fast=True
 
     gd = GradientDescentFixedZ(learning_rate=0.01, max_iterations=1000, tolerance=1e-5)
-    timestamp_list = read_timestamps('/home/marco/Documents/raw_802.11_new/CHECKPOINT_EXP_73')
+    timestamp_list = read_timestamps(f'/home/marco/Documents/raw_802.11_new/CHECKPOINT_{exp_target}')
     points_list = generate_intermediate_points(Measurement.points_exp)
     
-    chosen_points = []
     cc = (len(d[list(d.keys())[1]]))
     plt.show(block=False)
-    for j in range(0,cc): 
+    for j in range(0,cc):
+        if(fast):
+            j*=20
         error_dict = {}
         pos_dict = {}
         for i, group in enumerate(l):
@@ -90,10 +92,9 @@ if __name__ == "__main__":
         min_key = min(error_dict, key=lambda k: error_dict[k])
         min_value = error_dict[min_key]
         pos = pos_dict[min_key]
-        chosen_points.append(pos)
-    update_func(chosen_points, color='b')
+        update_func([pos], color='b')
+        plt.show(block=False)
 
-    plt.show()
         
 
 

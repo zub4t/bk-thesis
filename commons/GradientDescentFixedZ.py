@@ -34,7 +34,7 @@ class GradientDescentFixedZ:
 
     def train(self, measurements, initial_guess):
         target = initial_guess.copy()
-        target['z'] = 1.60  # Set the fixed z-axis value
+        target['z'] = 1.70  # Set the fixed z-axis value
 
         prev_cost = self.cost_function(measurements, target)
         improvement = float('inf')
