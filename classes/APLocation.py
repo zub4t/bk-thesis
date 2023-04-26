@@ -1,4 +1,6 @@
 import json
+
+
 class APLocation:
     def __init__(self, pos, bssid, id, x, y, z):
         self.POS = pos
@@ -13,10 +15,9 @@ class APLocation:
 
     @staticmethod
     def from_file_to_list(file_path):
-        
-        with open(file_path, 'r') as json_file:
+        with open(file_path, "r") as json_file:
             json_data = json.load(json_file)
-            
+
         ap_locations = []
         for item in json_data:
             ap_location = APLocation(
@@ -25,9 +26,8 @@ class APLocation:
                 id=item["ID"],
                 x=item["X"],
                 y=item["Y"],
-                z=item["Z"]
+                z=item["Z"],
             )
             ap_locations.append(ap_location)
-        
-        return ap_locations
 
+        return ap_locations

@@ -1,100 +1,163 @@
-import sys
+# TODO: Check if all measurements in the line 134 has the same timestamp
+
+
+import math
 import os
-cwd = os.getcwd()
+import sys
+
+import matplotlib.animation as animation
 import matplotlib.pyplot as plt
-sys.path.insert(0,os.path.join(cwd,'classes'))
-sys.path.insert(0,os.path.join(cwd,'commons'))
-from Measurement import Measurement
-from Synthetic import Synthetic
-from Util import *
+
+# Local modules
+cwd = os.getcwd()
+sys.path.insert(0, os.path.join(cwd, "classes"))
+sys.path.insert(0, os.path.join(cwd, "commons"))
+from APLocation import APLocation
 from GradientDescent import GradientDescent
 from GradientDescentFixedZ import GradientDescentFixedZ
-from APLocation import APLocation
-import matplotlib.animation as animation
-ax = None
+from Measurement import Measurement
+from Synthetic import Synthetic
+from Util import (
+    generate_intermediate_points,
+    generate_person_path,
+    generate_subgroups,
+    group_measurements_by_bssid,
+    interpolate_from_timestamp_to_location,
+    interpolate_points,
+    mean_location_1,
+    read_timestamps,
+    select_subset,
+    mean_error,
+    calculate_distance
+)
+
+
+# Define constants and settings
+SMOOTHING_FACTOR_DEGREES = 30
+USER_SPEED = 0.5
+
+
 # Example usage
 if __name__ == "__main__":
-
     print("Please choose a data option:")
     print("1. Use Synthetic data")
     print("2. Use 802.11mc data")
     print("3. Use Ultra Wide Band data")
-
+    initial_group_size = 4
     data_option = input("Enter the number of your choice: ")
-
+    experiment_target = None
     if data_option == "1":
         data_source = "Synthetic data"
     elif data_option == "2":
         data_source = "802.11mc data"
+        experiment_target = input("Enter the name of the experiment you want to visualize: ")
+        print(
+            f"You chose to use {data_source} and visualize the experiment {experiment_target}."
+        )
     elif data_option == "3":
         data_source = "Ultra Wide Band data"
+        experiment_target = input("Enter the name of the experiment you want to visualize: ")
+        print(
+            f"You chose to use {data_source} and visualize the experiment {experiment_target}."
+        )
     else:
         print("Invalid choice, please try again.")
         exit()
 
-    exp_target = input("Enter the name of the experiment you want to visualize: ")
-    print("You chose to use {} and visualize the experiment {}".format(data_source, exp_target))
-    l=None
-    d=None
-    update_func= None
-    fast=False
-    if(data_option == "1"):
-            num_points = int( 60 / 0.3)  # Assuming 4 minutes of path with a 0.3 seconds interval between points
-            side_length = 8
-            synthetic = Synthetic()
-            synthetic.square_path(num_points,side_length)
-            m = synthetic.generate_synthetic_data(12)
-            update_func= generate_person_path(20,Synthetic.real_person_path)
-            d = group_measurements_by_bssid(m)
-            l = generate_subgroups(4, arr=list(d.keys()) )
-    elif(data_option=="2"):
-            m = Measurement.read_json_file('/home/marco/Documents/site-thesis/file.json',exp_target,'802.11mc')
-            real_person_path=interpolate_points(Measurement.points_exp, 20)
-            update_func = generate_person_path(20,real_person_path)
-            print(m)
-            d = group_measurements_by_bssid(m)
-            l = generate_subgroups(4, arr=list(d.keys()) )
-    elif(data_option=="3"):     
-            m = Measurement.read_json_file('/home/marco/Documents/site-thesis/file.json',exp_target,'uwb')
-            real_person_path=interpolate_points(Measurement.points_exp, 20)
-            update_func = generate_person_path(20,real_person_path)
-            d = group_measurements_by_bssid(m)
-            l = generate_subgroups(4, arr=list(d.keys()) )
-            fast=True
+    # Load data and initialize variables
+    measurements_dict = None
+    subgroup_list = None
+    update_func = None
+    bias_func = lambda x: x
+    fast = False
+    if data_option == "1":
+        num_points = int(
+            60 / 0.3
+        )  # Assuming 4 minutes of path with a 0.3 seconds interval between points
+        side_length = 8
+        synthetic = Synthetic()
+        synthetic.square_path(num_points, side_length)
+        measurements = synthetic.generate_synthetic_data(8)
+        update_func = generate_person_path(20, Synthetic.real_person_path)
+        measurements_dict = group_measurements_by_bssid(measurements)
+    elif data_option == "2":
+        bias_func = lambda x: (x / 1.16) - 0.63
+        measurements = Measurement.read_json_file(
+            "/home/marco/Documents/site-thesis/file.json", experiment_target, "802.11mc"
+        )
+        real_person_path=interpolate_points(Measurement.points_exp, 20)
+        points_list = generate_intermediate_points(Measurement.points_exp)
+        update_func = generate_person_path(20, real_person_path)
+        measurements_dict = group_measurements_by_bssid(measurements)
+        initial_group_size = 8
+    elif data_option == "3":
+        measurements = Measurement.read_json_file(
+            "/home/marco/Documents/site-thesis/file.json", experiment_target, "uwb"
+        )
+        real_person_path = interpolate_points(Measurement.points_exp, 20)
+        update_func = generate_person_path(20, real_person_path)
+        measurements_dict = group_measurements_by_bssid(measurements)
+        fast = True
+        initial_group_size = 12
 
-    gd = GradientDescentFixedZ(learning_rate=0.01, max_iterations=1000, tolerance=1e-5)
-    timestamp_list = read_timestamps(f'/home/marco/Documents/raw_802.11_new/CHECKPOINT_{exp_target}')
-    points_list = generate_intermediate_points(Measurement.points_exp)
-    
-    cc = (len(d[list(d.keys())[1]]))
+    # Initialize gradient descent algorithm and visualization variables
+    gradient_descent = GradientDescentFixedZ(learning_rate=0.01, max_iterations=1000, tolerance=1e-5)
+    timestamp_list = []
+    if data_option != "1":
+        timestamp_list = read_timestamps(
+            f"/home/marco/Documents/raw_802.11_new/CHECKPOINT_{experiment_target}"
+        )
+        points_list = generate_intermediate_points(Measurement.points_exp)
+    num_measurements = len(measurements_dict[list(measurements_dict.keys())[1]])
     plt.show(block=False)
-    for j in range(0,cc):
-        if(fast):
-            j*=20
-        error_dict = {}
-        pos_dict = {}
-        for i, group in enumerate(l):
-            measurements=[]
-            for ap in group:
-                try:
-                    aux = d[ap][j]
-                    aux.responder_location= interpolate_from_timestamp_to_location(points_list,timestamp_list,aux.timestamp)
-                    measurements.append(aux)
-                except:
-                    print('error')
-                
-            pos = gd.train(measurements, {'x':0,'y':0,'z':0})
-            #pos['z'] = 1.6
-            pos_dict[group] = pos
-            error = calculate_distance(pos, measurements[1].responder_location)
-            error_dict[group] = error
-            print(f'{group} -- {j} --- {error}')
-        min_key = min(error_dict, key=lambda k: error_dict[k])
-        min_value = error_dict[min_key]
-        pos = pos_dict[min_key]
-        update_func([pos], color='b')
-        plt.show(block=False)
+    prev_mean_loc_list = [{"x": 0.1, "y": 0.1, "z": 0.1}]
+    prev_mean_loc = {"x": 0.1, "y": 0.1, "z": 0.1}
+    prev_timestamp = 0
+    smoothing_factor = math.radians(SMOOTHING_FACTOR_DEGREES)
 
+    for w in range(0,1):
+        print("group_size",initial_group_size - w)
+        subgroup_list = generate_subgroups((initial_group_size - w), arr=list(measurements_dict.keys()))
+        list_error = []
+        print(list_error)
+        # Perform gradient descent and update visualization for each measurement
+        for j in range(0, num_measurements):
+            if fast:
+                j *= 20
+            tuple_list = []
+            current_timestamp = 0
+            current_ground_truth = None
+            for i, subgroup in enumerate(subgroup_list):
+                measurements = []
+                for ap in subgroup:
+                    try:
+                        measurement = measurements_dict[ap][j]
+                        if data_option != "1":
+                            measurement.ground_truth = interpolate_from_timestamp_to_location(
+                                points_list, timestamp_list, measurement.timestamp
+                            )
+                        measurement.distance = bias_func(measurement.distance)
+                        measurements.append(measurement)
+                    except:
+                        print("error")
+                current_ground_truth = measurements[0].ground_truth
+                current_timestamp = measurements[0].timestamp
+                position = gradient_descent.train(measurements, {"x": 0, "y": 0, "z": 0})
+                # position['z'] = 1.6
+                #print(position)
+                tuple_list.append((subgroup, position))
+                #tuple_list.append((subgroup, current_ground_truth))
+                print(f"{subgroup} -- {j}")
+            subset = select_subset(tuple_list, 0.5)
+            mean_loc = mean_location_1(
+                subset, current_timestamp, prev_mean_loc, prev_timestamp, USER_SPEED
+            )
+            error = calculate_distance(mean_loc , current_ground_truth)
+            list_error.append(error)
+            prev_timestamp = current_timestamp
+            prev_mean_loc_list.append(mean_loc)
+            prev_mean_loc = mean_loc
+            update_func([mean_loc], color="b")
+            plt.show(block=False)
         
-
-
+        print(mean_error(list_error))
