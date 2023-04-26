@@ -44,7 +44,8 @@ if __name__ == "__main__":
     print("2. Use 802.11mc data")
     print("3. Use Ultra Wide Band data")
     initial_group_size = 12
-    data_option = input("Enter the number of your choice: ")
+    # data_option = input("Enter the number of your choice: ")
+    data_option = 1
     experiment_target = None
     if data_option == "1":
         data_source = "Synthetic data"
@@ -172,7 +173,7 @@ if __name__ == "__main__":
             #update_func([mean_loc], color="b")
             #plt.show(block=False)
 
-        append_to_file(f'group_size_{group_size}.txt',mean_error(list_error))
+        append_to_file(f'group_size_{group_size}.txt',str(mean_error(list_error)))
 
     def call_main_func(group_size):
         main_func(group_size)
