@@ -120,7 +120,7 @@ def generate_subgroups(group_size, arr=arr_ap):
 def group_measurements_by_bssid(measurements):
     grouped_measurements = {}
     for measurement in measurements:
-        #print(measurement)
+        # print(measurement)
         bssid = measurement.bssid
         if bssid not in grouped_measurements:
             grouped_measurements[bssid] = []
@@ -387,6 +387,7 @@ def mean_location(subset, current_ts, prev_mean_locs, prev_ts, speed):
 
     return mean_loc
 
+
 def mean_error(errors):
     """Calculate the mean error given a list of errors.
 
@@ -402,3 +403,14 @@ def mean_error(errors):
     total_error = sum(errors)
     mean_error = total_error / n
     return mean_error
+
+def append_to_file(filename, text):
+    try:
+        # Try to open the file in "append" mode
+        with open(filename, 'a') as f:
+            f.write(text + '\n')
+    except FileNotFoundError:
+        # If the file doesn't exist, create it and write the text to it
+        with open(filename, 'w') as f:
+            f.write(text + '\n')
+
