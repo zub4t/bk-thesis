@@ -120,7 +120,7 @@ def generate_subgroups(group_size, arr=arr_ap):
 def group_measurements_by_bssid(measurements):
     grouped_measurements = {}
     for measurement in measurements:
-        print(measurement)
+        #print(measurement)
         bssid = measurement.bssid
         if bssid not in grouped_measurements:
             grouped_measurements[bssid] = []
@@ -386,3 +386,19 @@ def mean_location(subset, current_ts, prev_mean_locs, prev_ts, speed):
         )
 
     return mean_loc
+
+def mean_error(errors):
+    """Calculate the mean error given a list of errors.
+
+    Args:
+        errors (list): A list of errors.
+
+    Returns:
+        float: The mean error.
+    """
+    n = len(errors)
+    if n == 0:
+        return 0
+    total_error = sum(errors)
+    mean_error = total_error / n
+    return mean_error

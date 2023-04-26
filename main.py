@@ -27,6 +27,8 @@ from Util import (
     mean_location_1,
     read_timestamps,
     select_subset,
+    mean_error,
+    calculate_distance
 )
 
 
@@ -41,7 +43,7 @@ if __name__ == "__main__":
     print("1. Use Synthetic data")
     print("2. Use 802.11mc data")
     print("3. Use Ultra Wide Band data")
-
+    initial_group_size = 4
     data_option = input("Enter the number of your choice: ")
     experiment_target = None
     if data_option == "1":
@@ -75,20 +77,19 @@ if __name__ == "__main__":
         side_length = 8
         synthetic = Synthetic()
         synthetic.square_path(num_points, side_length)
-        measurements = synthetic.generate_synthetic_data(12)
+        measurements = synthetic.generate_synthetic_data(8)
         update_func = generate_person_path(20, Synthetic.real_person_path)
         measurements_dict = group_measurements_by_bssid(measurements)
-        subgroup_list = generate_subgroups(12, arr=list(measurements_dict.keys()))
     elif data_option == "2":
-        # bias_func = lambda x: (x / 1.16) - 0.63
+        bias_func = lambda x: (x / 1.16) - 0.63
         measurements = Measurement.read_json_file(
             "/home/marco/Documents/site-thesis/file.json", experiment_target, "802.11mc"
         )
-        real_person_path = interpolate
+        real_person_path=interpolate_points(Measurement.points_exp, 20)
         points_list = generate_intermediate_points(Measurement.points_exp)
         update_func = generate_person_path(20, real_person_path)
         measurements_dict = group_measurements_by_bssid(measurements)
-        subgroup_list = generate_subgroups(4, arr=list(measurements_dict.keys()))
+        initial_group_size = 8
     elif data_option == "3":
         measurements = Measurement.read_json_file(
             "/home/marco/Documents/site-thesis/file.json", experiment_target, "uwb"
@@ -96,8 +97,8 @@ if __name__ == "__main__":
         real_person_path = interpolate_points(Measurement.points_exp, 20)
         update_func = generate_person_path(20, real_person_path)
         measurements_dict = group_measurements_by_bssid(measurements)
-        subgroup_list = generate_subgroups(4, arr=list(measurements_dict.keys()))
         fast = True
+        initial_group_size = 12
 
     # Initialize gradient descent algorithm and visualization variables
     gradient_descent = GradientDescentFixedZ(learning_rate=0.01, max_iterations=1000, tolerance=1e-5)
@@ -114,39 +115,49 @@ if __name__ == "__main__":
     prev_timestamp = 0
     smoothing_factor = math.radians(SMOOTHING_FACTOR_DEGREES)
 
-    # Perform gradient descent and update visualization for each measurement
-    for j in range(0, num_measurements):
-        if fast:
-            j *= 20
-        tuple_list = []
-        current_timestamp = 0
-        current_ground_truth = None
-        for i, subgroup in enumerate(subgroup_list):
-            measurements = []
-            for ap in subgroup:
-                try:
-                    measurement = measurements_dict[ap][j]
-                    if data_option != "1":
-                        measurement.responder_location = interpolate_from_timestamp_to_location(
-                            points_list, timestamp_list, measurement.timestamp
-                        )
-                    measurement.distance = bias_func(measurement.distance)
-                    measurements.append(measurement)
-                except:
-                    print("error")
-            current_ground_truth = measurements[0].responder_location
-            current_timestamp = measurements[0].timestamp
-            position = gradient_descent.train(measurements, {"x": 0, "y": 0, "z": 0})
-            # position['z'] = 1.6
-            print(position)
-            tuple_list.append((subgroup, position))
-            print(f"{subgroup} -- {j}")
-        subset = select_subset(tuple_list, 0.5)
-        mean_loc = mean_location_1(
-            subset, current_timestamp, prev_mean_loc, prev_timestamp, USER_SPEED
-        )
-        prev_timestamp = current_timestamp
-        prev_mean_loc_list.append(mean_loc)
-        prev_mean_loc = mean_loc
-        update_func([mean_loc], color="b")
-        plt.show(block=False)
+    for w in range(0,1):
+        print("group_size",initial_group_size - w)
+        subgroup_list = generate_subgroups((initial_group_size - w), arr=list(measurements_dict.keys()))
+        list_error = []
+        print(list_error)
+        # Perform gradient descent and update visualization for each measurement
+        for j in range(0, num_measurements):
+            if fast:
+                j *= 20
+            tuple_list = []
+            current_timestamp = 0
+            current_ground_truth = None
+            for i, subgroup in enumerate(subgroup_list):
+                measurements = []
+                for ap in subgroup:
+                    try:
+                        measurement = measurements_dict[ap][j]
+                        if data_option != "1":
+                            measurement.ground_truth = interpolate_from_timestamp_to_location(
+                                points_list, timestamp_list, measurement.timestamp
+                            )
+                        measurement.distance = bias_func(measurement.distance)
+                        measurements.append(measurement)
+                    except:
+                        print("error")
+                current_ground_truth = measurements[0].ground_truth
+                current_timestamp = measurements[0].timestamp
+                position = gradient_descent.train(measurements, {"x": 0, "y": 0, "z": 0})
+                # position['z'] = 1.6
+                #print(position)
+                tuple_list.append((subgroup, position))
+                #tuple_list.append((subgroup, current_ground_truth))
+                print(f"{subgroup} -- {j}")
+            subset = select_subset(tuple_list, 0.5)
+            mean_loc = mean_location_1(
+                subset, current_timestamp, prev_mean_loc, prev_timestamp, USER_SPEED
+            )
+            error = calculate_distance(mean_loc , current_ground_truth)
+            list_error.append(error)
+            prev_timestamp = current_timestamp
+            prev_mean_loc_list.append(mean_loc)
+            prev_mean_loc = mean_loc
+            update_func([mean_loc], color="b")
+            plt.show(block=False)
+        
+        print(mean_error(list_error))

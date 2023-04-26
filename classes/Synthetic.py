@@ -32,7 +32,7 @@ class Synthetic:
             timestamp = i * time_interval
             for ap_name, ap_location in ap_locations.items():
                 distance = calculate_distance(person_location, ap_location)
-                distance_plus_noise = distance + random.uniform(-5.0, 5.0)
+                distance_plus_noise = distance + random.uniform(-1.0, 1.0)
                 measurement = Measurement(
                     timestamp,
                     ap_name,
