@@ -85,7 +85,7 @@ if __name__ == "__main__":
         update_func = generate_person_path(20, Synthetic.real_person_path)
         measurements_dict = group_measurements_by_bssid(measurements)
     elif data_option == "2":
-        bias_func = lambda x: (x / 1.16) - 0.63
+        #bias_func = lambda x: (x / 1.16) - 0.63
         measurements = Measurement.read_json_file(
             "./file.json", experiment_target, "802.11mc"
         )
@@ -166,7 +166,7 @@ if __name__ == "__main__":
                 # print(position)
                 tuple_list.append((subgroup, position))
                 #tuple_list.append((subgroup, current_ground_truth))
-                #print(f"{subgroup} -- {j}")
+                print(f"{subgroup} -- {j}")
             subset = select_subset(tuple_list, 0.5)
             mean_loc = mean_location_1(
                 subset, current_timestamp, prev_mean_loc, prev_timestamp, USER_SPEED
@@ -176,12 +176,21 @@ if __name__ == "__main__":
             prev_timestamp = current_timestamp
             prev_mean_loc_list.append(mean_loc)
             prev_mean_loc = mean_loc
-            update_func([mean_loc], color="b")
+            test = []
+            for key in measurements_dict:
+                    test.append(measurements_dict[key][j])
+
+            position_test = gradient_descent.train(
+                test, {"x": 0, "y": 0, "z": 0}
+            )
+            update_func([mean_loc], color="b") 
+            update_func([position_test], color="purple")
+            update_func([current_ground_truth], color="g")
             plt.show(block=False)
 
         append_to_file(f'group_size_{group_size}.txt',str(mean_error(list_error)))
 
-    main_func(initial_group_size)
+    main_func(4)
     # def call_main_func(group_size):
     #     main_func(group_size)
     #
