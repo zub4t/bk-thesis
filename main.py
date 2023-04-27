@@ -44,8 +44,7 @@ if __name__ == "__main__":
     print("2. Use 802.11mc data")
     print("3. Use Ultra Wide Band data")
     initial_group_size = 12
-    # data_option = input("Enter the number of your choice: ")
-    data_option = 1
+    data_option = input("Enter the number of your choice: ")
     experiment_target = None
     if data_option == "1":
         data_source = "Synthetic data"
@@ -88,16 +87,16 @@ if __name__ == "__main__":
     elif data_option == "2":
         bias_func = lambda x: (x / 1.16) - 0.63
         measurements = Measurement.read_json_file(
-            "/home/marco/Documents/site-thesis/file.json", experiment_target, "802.11mc"
+            "./file.json", experiment_target, "802.11mc"
         )
         real_person_path = interpolate_points(Measurement.points_exp, 20)
         points_list = generate_intermediate_points(Measurement.points_exp)
         update_func = generate_person_path(20, real_person_path)
         measurements_dict = group_measurements_by_bssid(measurements)
-        initial_group_size = 8
+        initial_group_size = 6
     elif data_option == "3":
         measurements = Measurement.read_json_file(
-            "/home/marco/Documents/site-thesis/file.json", experiment_target, "uwb"
+            "./file.json", experiment_target, "uwb"
         )
         real_person_path = interpolate_points(Measurement.points_exp, 20)
         update_func = generate_person_path(20, real_person_path)
@@ -110,13 +109,20 @@ if __name__ == "__main__":
         learning_rate=0.01, max_iterations=1000, tolerance=1e-5
     )
     timestamp_list = []
-    if data_option != "1":
+    if data_option == "2":
         timestamp_list = read_timestamps(
-            f"/home/marco/Documents/raw_802.11_new/CHECKPOINT_{experiment_target}"
+            f"./CHECKPOINTS/CHECKPOINT_{experiment_target}"
+        )
+        points_list = generate_intermediate_points(Measurement.points_exp)
+
+    if data_option == "3":
+        aux = experiment_target.split('_')
+        timestamp_list = read_timestamps(
+            f"./CHECKPOINTS/CHECKPOINT_EXP_{int(aux[1])+17}"
         )
         points_list = generate_intermediate_points(Measurement.points_exp)
     num_measurements = len(measurements_dict[list(measurements_dict.keys())[1]])
-    #plt.show(block=False)
+    plt.show(block=False)
 
     def main_func(group_size):
         prev_mean_loc_list = [{"x": 0.1, "y": 0.1, "z": 0.1}]
@@ -159,7 +165,7 @@ if __name__ == "__main__":
                 # position['z'] = 1.6
                 # print(position)
                 tuple_list.append((subgroup, position))
-                # tuple_list.append((subgroup, current_ground_truth))
+                #tuple_list.append((subgroup, current_ground_truth))
                 #print(f"{subgroup} -- {j}")
             subset = select_subset(tuple_list, 0.5)
             mean_loc = mean_location_1(
@@ -170,20 +176,21 @@ if __name__ == "__main__":
             prev_timestamp = current_timestamp
             prev_mean_loc_list.append(mean_loc)
             prev_mean_loc = mean_loc
-            #update_func([mean_loc], color="b")
-            #plt.show(block=False)
+            update_func([mean_loc], color="b")
+            plt.show(block=False)
 
         append_to_file(f'group_size_{group_size}.txt',str(mean_error(list_error)))
 
-    def call_main_func(group_size):
-        main_func(group_size)
-
-    threads = []
-    for w in range(0, 8):
-        t = threading.Thread(target=call_main_func, args=(initial_group_size - w,))
-        threads.append(t)
-        t.start()
-
-    for t in threads:
-        t.join()
+    main_func(initial_group_size)
+    # def call_main_func(group_size):
+    #     main_func(group_size)
+    #
+    # threads = []
+    # for w in range(0, 1):
+    #     t = threading.Thread(target=call_main_func, args=(initial_group_size - w,))
+    #     threads.append(t)
+    #     t.start()
+    #
+    # for t in threads:
+    #     t.join()
 
