@@ -5,16 +5,61 @@ import os
 cwd = os.getcwd()
 sys.path.insert(0, os.path.join(cwd, "..", "commons"))
 from Measurement import Measurement
-from Util import calculate_distance
+import Util
 
 
 class Synthetic:
     real_person_path = []
 
     def __init__(self):
-        pass
+        self.static_ground_truth=None
+    def generate_random_ap_location(self,num_aps,room_size=(10, 6, 4)
+):
+        ap_locations={}
+        for i in range(1, num_aps + 1):
+            ap_locations[f"ap_{i}"] = {
+                "x": random.uniform(0, room_size[0]),
+                "y": random.uniform(0, room_size[1]),
+                "z": random.uniform(0, room_size[2]),
+            }
+        return ap_locations
 
-    def generate_synthetic_data(
+    def generate_synthetic_data_static(
+        self, num_aps, ap_locations={}, room_size=(10, 6, 4)
+    ):
+        # Generate random AP locations
+        if len(ap_locations) == 0:
+            for i in range(1, num_aps + 1):
+                ap_locations[f"ap_{i}"] = {
+                    "x": random.uniform(0, room_size[0]),
+                    "y": random.uniform(0, room_size[1]),
+                    "z": random.uniform(0, room_size[2]),
+                }
+
+        # Generate measurements
+        if(self.static_ground_truth == None):
+            self.static_ground_truth = {
+                        "x": random.uniform(0, room_size[0]),
+                        "y": random.uniform(0, room_size[1]),
+                        "z": random.uniform(0, room_size[2]),
+                    }
+        measurements = []
+        for ap_name, ap_location in ap_locations.items():
+            distance = Util.calculate_distance(self.static_ground_truth, ap_location)
+            distance_plus_noise = distance + random.uniform(-2.0, 2.0)
+            measurement = Measurement(
+                1,
+                ap_name,
+                distance_plus_noise,
+                self.static_ground_truth,
+                ap_location,
+            )
+            measurements.append(measurement)
+
+        measurements_dict = Util.group_measurements_by_bssid(measurements)
+        return measurements_dict
+
+    def generate_synthetic_data_dynamic(
         self, num_aps, ap_locations={}, room_size=(10, 6, 4), time_interval=0.3
     ):
         # Generate random AP locations
@@ -31,7 +76,7 @@ class Synthetic:
         for i, person_location in enumerate(Synthetic.real_person_path):
             timestamp = i * time_interval
             for ap_name, ap_location in ap_locations.items():
-                distance = calculate_distance(person_location, ap_location)
+                distance = Util.calculate_distance(person_location, ap_location)
                 distance_plus_noise = distance + random.uniform(-1.0, 1.0)
                 measurement = Measurement(
                     timestamp,
@@ -42,7 +87,8 @@ class Synthetic:
                 )
                 measurements.append(measurement)
 
-        return measurements
+        measurements_dict = Util.group_measurements_by_bssid(measurements)
+        return measurements_dict
 
     def generate_random_path(self, num_points, room_size=(10, 6, 4), max_distance=0.2):
         for _ in range(num_points):
@@ -63,7 +109,7 @@ class Synthetic:
                         "z": random.uniform(0, room_size[2]),
                     }
                     if (
-                        calculate_distance(
+                        Util.calculate_distance(
                             Synthetic.real_person_path[-1], candidate_point
                         )
                         <= max_distance

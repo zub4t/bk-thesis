@@ -1,4 +1,5 @@
 import math
+import json
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.optimize import minimize
@@ -6,6 +7,8 @@ import numpy as np
 from more_itertools import distinct_combinations
 import sys
 import os
+import random
+import matplotlib.colors as mcolors
 
 cwd = os.getcwd()
 sys.path.insert(0, os.path.join(cwd, "..", "classes"))
@@ -238,7 +241,7 @@ def interpolate_from_timestamp_to_location(points, timestamps, target_timestamp)
     return {"x": x, "y": y, "z": z}
 
 
-def generate_person_path(steps, real_person_path):
+def generate_person_path(real_person_path):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
 
@@ -264,128 +267,6 @@ def generate_person_path(steps, real_person_path):
             plt.pause(0.001)
 
     return update
-
-
-def select_subset(data, threshold):
-    def is_close(point1, point2):
-        return calculate_distance(point1, point2) < threshold
-
-    subsets = []
-    for element in data:
-        ap_combination, location = element
-        current_subset = [element]
-
-        for other_element in data:
-            if other_element != element:
-                _, other_location = other_element
-                if is_close(location, other_location):
-                    current_subset.append(other_element)
-
-        subsets.append(current_subset)
-
-    # Find the largest subset
-    largest_subset = max(subsets, key=len)
-    return largest_subset
-
-
-def calculate_raw_mean_location(subset):
-    total_x = 0
-    total_y = 0
-    total_z = 0
-    n = len(subset)
-
-    for element in subset:
-        _, location = element
-        total_x += location["x"]
-        total_y += location["y"]
-        total_z += location["z"]
-
-    return {"x": total_x / n, "y": total_y / n, "z": total_z / n}
-
-
-def move_towards(raw_loc, prev_loc, ratio):
-    return {
-        "x": prev_loc["x"] + (raw_loc["x"] - prev_loc["x"]) * ratio,
-        "y": prev_loc["y"] + (raw_loc["y"] - prev_loc["y"]) * ratio,
-        "z": prev_loc["z"] + (raw_loc["z"] - prev_loc["z"]) * ratio,
-    }
-
-
-def mean_location_1(subset, current_ts, prev_mean_loc, prev_ts, speed):
-    total_x = 0
-    total_y = 0
-    total_z = 0
-    n = len(subset)
-
-    for element in subset:
-        _, location = element
-        total_x += location["x"]
-        total_y += location["y"]
-        total_z += location["z"]
-
-    raw_mean_x = total_x / n
-    raw_mean_y = total_y / n
-    raw_mean_z = total_z / n
-
-    time_diff = current_ts - prev_ts
-    max_distance = speed * time_diff
-    distance = calculate_distance(
-        prev_mean_loc, {"x": raw_mean_x, "y": raw_mean_y, "z": raw_mean_z}
-    )
-
-    if distance <= max_distance:
-        mean_x = raw_mean_x
-        mean_y = raw_mean_y
-        mean_z = raw_mean_z
-    else:
-        ratio = max_distance / distance
-        mean_x = prev_mean_loc["x"] + (raw_mean_x - prev_mean_loc["x"]) * ratio
-        mean_y = prev_mean_loc["y"] + (raw_mean_y - prev_mean_loc["y"]) * ratio
-        mean_z = prev_mean_loc["z"] + (raw_mean_z - prev_mean_loc["z"]) * ratio
-
-    return {"x": mean_x, "y": mean_y, "z": mean_z}
-
-
-def mean_location(subset, current_ts, prev_mean_locs, prev_ts, speed):
-    raw_mean_loc = calculate_raw_mean_location(subset)
-
-    time_diff = current_ts - prev_ts
-    max_distance = speed * time_diff
-    distance = calculate_distance(prev_mean_locs[-1], raw_mean_loc)
-
-    if distance <= max_distance:
-        if len(prev_mean_locs) > 0:
-            weighted_mean_x = 0
-            weighted_mean_y = 0
-            weighted_mean_z = 0
-            total_weight = 0
-
-            for i, prev_mean_loc in enumerate(reversed(prev_mean_locs)):
-                weight = 1 / (i + 1)  # More weight for recent locations
-                total_weight += weight
-
-                weighted_mean_x += prev_mean_loc["x"] * weight
-                weighted_mean_y += prev_mean_loc["y"] * weight
-                weighted_mean_z += prev_mean_loc["z"] * weight
-
-            weighted_mean_x /= total_weight
-            weighted_mean_y /= total_weight
-            weighted_mean_z /= total_weight
-
-            alpha = 0.5  # A tuning parameter between 0 and 1 to blend the raw mean location and the weighted moving average
-            mean_x = alpha * raw_mean_loc["x"] + (1 - alpha) * weighted_mean_x
-            mean_y = alpha * raw_mean_loc["y"] + (1 - alpha) * weighted_mean_y
-            mean_z = alpha * raw_mean_loc["z"] + (1 - alpha) * weighted_mean_z
-
-            mean_loc = {"x": mean_x, "y": mean_y, "z": mean_z}
-        else:
-            mean_loc = raw_mean_loc
-    else:
-        mean_loc = move_towards(
-            raw_mean_loc, prev_mean_locs[-1], max_distance / distance
-        )
-
-    return mean_loc
 
 
 def mean_error(errors):
@@ -414,3 +295,51 @@ def append_to_file(filename, text):
         with open(filename, 'w') as f:
             f.write(text + '\n')
 
+
+
+def read_json_file(file_path):
+    with open(file_path, "r") as f:
+        data = json.load(f)
+        measurement_list = []
+        #for exp_l in data["mobileLocationMap"]:
+        print(data["mobileLocationMap"])
+        for measurement_data in data["comparisonData"]:
+                    if len(measurement_data["id"]) > 4:
+                        measurement = Measurement(
+                            measurement_data["timestamp"],
+                            measurement_data["id"],
+                            measurement_data["measurement"],
+                            measurement_data["groundTruth"],
+                            measurement_data["pos"],
+                            "802.11mc",
+                            measurement_data["exp"]
+                        )
+                        measurement_list.append(measurement)
+                    else:
+                        measurement = Measurement(
+                            measurement_data["timestamp"],
+                            measurement_data["id"],
+                            measurement_data["measurement"],
+                            measurement_data["groundTruth"],
+                            measurement_data["pos"],
+                            "uwb",
+                            measurement_data["exp"]
+                        )
+                        measurement_list.append(measurement)
+
+        measurements_dict = group_measurements_by_bssid(measurement_list)
+        return measurements_dict,data["mobileLocationMap"]
+
+
+def generate_color_dict(some_set):
+    color_dict = {}
+    # get a list of all available named colors in Matplotlib
+    colors = list(mcolors.CSS4_COLORS.keys())
+    for element in some_set:
+        # randomly select a color from the list of named colors
+        color_name = random.choice(colors)
+        # get the RGB tuple corresponding to the named color
+        color_rgb = mcolors.CSS4_COLORS[color_name]
+        # add the element and color to the dictionary
+        color_dict[element] = color_rgb
+    return color_dict
