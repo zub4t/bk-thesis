@@ -297,13 +297,14 @@ def append_to_file(filename, text):
 
 
 
-def read_json_file(file_path):
+def read_json_file(file_path,technology):
     with open(file_path, "r") as f:
         data = json.load(f)
         measurement_list = []
         #for exp_l in data["mobileLocationMap"]:
         print(data["mobileLocationMap"])
         for measurement_data in data["comparisonData"]:
+                if(technology=="802.11mc"):
                     if len(measurement_data["id"]) > 4:
                         measurement = Measurement(
                             measurement_data["timestamp"],
@@ -315,7 +316,8 @@ def read_json_file(file_path):
                             measurement_data["exp"]
                         )
                         measurement_list.append(measurement)
-                    else:
+                else:
+                    if len(measurement_data["id"]) <= 4:
                         measurement = Measurement(
                             measurement_data["timestamp"],
                             measurement_data["id"],
