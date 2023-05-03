@@ -1,0 +1,2 @@
+exp_name,num_elements_in_cluster,mean_of_which_cluster,distance_to_real_loc
+EXP_11,64,"{'x': 2.5251200832369127, 'y': 4.984963353251411, 'z': 0.6172112962862166}",0.8042330818860909

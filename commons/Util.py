@@ -333,6 +333,21 @@ def read_json_file(file_path,technology):
         return measurements_dict,data["mobileLocationMap"]
 
 
+def generate_color_dict_v1(some_set):
+    color_dict = {}
+    # Get a list of all available named colors in Matplotlib
+    all_colors = list(mcolors.CSS4_COLORS.keys())
+    # Filter out light colors based on the combined RGB value
+    colors = [color for color in all_colors if sum(mcolors.to_rgb(color)) < 1.5]
+    for i, element in enumerate(some_set):
+        # Randomly select a color from the list of named colors
+        color_name = random.choice(colors)
+        # Get the RGB tuple corresponding to the named color
+        color_rgb = mcolors.CSS4_COLORS[color_name]
+        # Add the element and color to the dictionary
+        color_dict[element] = color_rgb
+    return color_dict
+
 def generate_color_dict(some_set):
     color_dict = {}
     # get a list of all available named colors in Matplotlib

@@ -58,7 +58,7 @@ def process(subgroup_size, exp):
     dbscan = DBSCAN(eps=0.10, min_samples=4)
     dbscan.fit(np.array(l))
     cl = dbscan.labels_
-    colors = Util.generate_color_dict(set(cl))
+    colors = Util.generate_color_dict_v1(set(cl))
     counter = Counter([x for x in cl if x != -1])
     # find the most common integer
     most_common = -1
