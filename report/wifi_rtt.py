@@ -85,12 +85,15 @@ def main(log_name, exp_target, subgroup_size):
             all_mean.append(mean_point)
             all_num_elements_in_cluster.append(len(points_by_cluster[key]))
             all_distance_to_real_loc.append(Util.calculate_distance(gt, mean_point))
+            min_point = Util.calculate_distance(gt, Util.min_sum_distances_points(all_pos))
+
         write_csv(
             exp_target,
             all_num_elements_in_cluster,
             all_mean,
             all_distance_to_real_loc,
             log_name,
+            min_point
         )
 
     def write_csv(
@@ -99,6 +102,7 @@ def main(log_name, exp_target, subgroup_size):
         mean_of_which_cluster,
         distance_to_real_loc,
         file_path,
+        min_point
     ):
         data = list(
             zip(
@@ -106,6 +110,7 @@ def main(log_name, exp_target, subgroup_size):
                 num_elements_in_cluster,
                 mean_of_which_cluster,
                 distance_to_real_loc,
+                [min_point] * len(mean_of_which_cluster),
             )
         )
 
