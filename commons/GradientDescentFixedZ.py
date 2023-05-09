@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.join(cwd, "..", "classes"))
 from Util import calculate_distance
 
 
-class GradientDescentFixedZ:
+class GradientDescent:
     def __init__(self, learning_rate=0.1, max_iterations=1000000, tolerance=1e-5):
         self.learning_rate = learning_rate
         self.max_iterations = max_iterations

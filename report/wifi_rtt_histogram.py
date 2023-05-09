@@ -125,6 +125,8 @@ def main(log_name, exp_target, subgroup_size):
             all_mean.append(mean_point)
             all_num_elements_in_cluster.append(len(points_by_cluster[key]))
             all_distance_to_real_loc.append(Util.calculate_distance(gt, mean_point))
+            min_point = Util.calculate_distance(gt, Util.min_sum_distances_points(all_pos))
+
         write_csv(
             exp_target,
             all_num_elements_in_cluster,
@@ -133,6 +135,7 @@ def main(log_name, exp_target, subgroup_size):
             lowest_point,
             lowest_point_distance,
             log_name,
+            min_point
         )
 
     def write_csv(
@@ -143,6 +146,7 @@ def main(log_name, exp_target, subgroup_size):
         lowest_point,
         lowest_point_distance,
         file_path,
+        min_point
     ):
         data = list(
             zip(
@@ -150,8 +154,12 @@ def main(log_name, exp_target, subgroup_size):
                 num_elements_in_cluster,
                 mean_of_which_cluster,
                 distance_to_real_loc,
+<<<<<<< HEAD:report/wifi_rtt_histogram.py
                 [lowest_point] * len(mean_of_which_cluster),
                 [lowest_point_distance] * len(mean_of_which_cluster),
+=======
+                [min_point] * len(mean_of_which_cluster),
+>>>>>>> b673137218dd7cb478a2675b30d99e4ca333e099:report/wifi_rtt.py
             )
         )
 

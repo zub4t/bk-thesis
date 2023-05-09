@@ -361,6 +361,7 @@ def generate_color_dict(some_set):
         color_dict[element] = color_rgb
     return color_dict
 
+
 def find_lowest_sum_point(points):
     point_distance_sums = []
 
@@ -370,3 +371,18 @@ def find_lowest_sum_point(points):
 
     return min(point_distance_sums, key=lambda x: x[1])[0]
 
+
+def min_sum_distances_points(points):
+    min_sum = float('inf')
+    min_point = None
+
+    for i, p1 in enumerate(points):
+        sum_dist = 0
+        for j, p2 in enumerate(points):
+            if i != j:
+                dist = math.sqrt((p2['x'] - p1['x']) ** 2 + (p2['y'] - p1['y']) ** 2 + (p2['z'] - p1['z']) ** 2)
+                sum_dist += dist
+        if sum_dist < min_sum:
+            min_sum = sum_dist
+            min_point = p1
+    return min_point 
