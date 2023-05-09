@@ -360,3 +360,13 @@ def generate_color_dict(some_set):
         # add the element and color to the dictionary
         color_dict[element] = color_rgb
     return color_dict
+
+def find_lowest_sum_point(points):
+    point_distance_sums = []
+
+    for point in points:
+        distance_sum = sum(calculate_distance(point, other) for other in points if other != point)
+        point_distance_sums.append((point, distance_sum))
+
+    return min(point_distance_sums, key=lambda x: x[1])[0]
+
