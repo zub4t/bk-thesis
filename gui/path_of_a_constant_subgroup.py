@@ -1,10 +1,6 @@
 import os
-<<<<<<< HEAD
-import datetime
-=======
 import subprocess
 from PIL import Image, ImageTk
->>>>>>> b673137218dd7cb478a2675b30d99e4ca333e099
 from collections import Counter
 import sys
 import json
@@ -44,65 +40,15 @@ def process(subgroup_size, exp):
         k: [obj for obj in v if obj.exp == exp] for k, v in measurements_dict.items() if any(obj.exp == exp for obj in v)
     }
 
-
-
-    # new_data = {}
-    # delta_t = 5000  # the maximum time difference to consider
-    # for key, measurements in filtered_dict.items():
-    #     new_measurements = []
-    #     current_measurements = []
-    #     current_timestamp = None
-    #     for measurement in measurements:
-    #         if current_timestamp is None:
-    #             current_timestamp = measurement.timestamp
-    #             current_measurements.append(measurement)
-    #         elif measurement.timestamp - current_timestamp <= delta_t:
-    #             current_measurements.append(measurement)
-    #         else:
-    #             # calculate the average distance for the current timestamp
-    #             distances = [m.distance for m in current_measurements]
-    #             avg_distance = sum(distances) / len(distances)
-    #             current_measurements[0].distance = avg_distance
-    #             new_measurement = current_measurements[0]
-    #             new_measurements.append(new_measurement)
-    #
-    #             # reset the current measurements list and timestamp
-    #             current_measurements = [measurement]
-    #             current_timestamp = measurement.timestamp
-    #
-    #     # add the last average measurement
-    #     if current_measurements:
-    #         distances = [m.distance for m in current_measurements]
-    #         avg_distance = sum(distances) / len(distances)
-    #         current_measurements[0].distance = avg_distance
-    #         new_measurement = current_measurements[0]
-    #         new_measurements.append(new_measurement)
-    #
-    #     # add the new measurements to the new dictionary
-    #     new_data[key] = new_measurements
-    # filtered_dict = new_data
-    # print(len(filtered_dict['112E']))
-
-
-
-    #sampled_list = random.sample(filtered_dict.keys(), 6)
+    filtered_dict = Util.filter_measurements(filtered_dict)
     sampled_list = ['5A0A','111F','D018','D713','120F','868C']
     subgroup_list = Util.generate_subgroups(subgroup_size, arr=sampled_list)
-<<<<<<< HEAD
-    return filtered_dict, subgroup_list
-
-
-root = tk.Tk()
-root.title("WiFi path 6 of 4")
-
-=======
     all_pos = {}
     return filtered_dict, subgroup_list,sampled_list
     #cl = all_pos.keys()
 root = tk.Tk()
 root.attributes("-fullscreen", True)
 root.title("WiFi path 6 of 4")
->>>>>>> b673137218dd7cb478a2675b30d99e4ca333e099
 # create a figure for the plot
 fig = Figure(figsize=(6, 4), dpi=100)
 
@@ -116,16 +62,6 @@ controls_frame = tk.Frame(root)
 controls_frame.pack(side=tk.BOTTOM)
 
 def plot():
-<<<<<<< HEAD
-    fig.clf()
-    ax = fig.add_subplot(111, projection='3d') 
-    ax.set_xlim([0, 10])
-    ax.set_ylim([0, 10])
-    ax.set_zlim([0, 10])
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-    ax.set_zlabel("Z")
-=======
 
     fig.clf()
     ax = fig.add_subplot(111) 
@@ -135,19 +71,13 @@ def plot():
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     #ax.set_zlabel("Z")
->>>>>>> b673137218dd7cb478a2675b30d99e4ca333e099
     real_person_path = Util.interpolate_points(Measurement.points_exp, 20)
 
     x = [point["x"] for point in real_person_path]
     y = [point["y"] for point in real_person_path]
-<<<<<<< HEAD
-    z = [point["z"] for point in real_person_path]
-    ax.scatter(x, y, z, c="r", marker="o")
-=======
     #z = [point["z"] for point in real_person_path]
     #ax.scatter(x, y, z, c="r", marker="o")
     ax.scatter(x, y, c="r", marker="o")
->>>>>>> b673137218dd7cb478a2675b30d99e4ca333e099
     global Colors
     global Subgroup_list 
     global Filtered_dict
@@ -156,16 +86,7 @@ def plot():
     global Points_list
     global Sampled_list
     all_pos = {}
-<<<<<<< HEAD
-    timestamp_list = []
-    ap_used_set  = []
-    for i, subgroup in enumerate(Subgroup_list):
-        measurements = []
-        for ap in subgroup:
-            ap_used_set.append(ap)
-=======
     all_gt=[]
->>>>>>> b673137218dd7cb478a2675b30d99e4ca333e099
     for i, subgroup in enumerate(Subgroup_list):
         measurements = []
         for ap in subgroup:
@@ -180,7 +101,6 @@ def plot():
                                             )
                                         )
                 measurements.append(measurement)
-                timestamp_list.append(measurement.timestamp)
             except:
                 print("e")
         position = gradient_descent.train(measurements, {"x": 0, "y": 0, "z": 0})
@@ -196,22 +116,16 @@ def plot():
             all_pos[subgroup].append(position)
         else:
             all_pos[subgroup] = [position]
-<<<<<<< HEAD
-    for ap in set(ap_used_set):
-        for i in range(0,1):
-            Filtered_dict[ap].pop(0)
-=======
         for ap in Sampled_list: 
             Filtered_dict[ap].pop(0)
     column=10    
->>>>>>> b673137218dd7cb478a2675b30d99e4ca333e099
     for i,key in enumerate(all_pos):
         point = all_pos[key][0]
         text = f"{key}"
-        y_random = column  # generate a random y value between 6 and 10
-        x_random = (i%4)*2   # generate a random x value between 0 and 10
+        y_random = column  
+        x_random = (i%4)*2  
         if(i%4 !=0):
-            x_random = (i%4)*2   # generate a random x value between 0 and 10
+            x_random = (i%4)*2  
         else:
             column -=1
         ax.scatter(x_random, y_random)
@@ -226,17 +140,7 @@ def plot():
         ax.scatter(gt['x'], gt['y'], s=20, c='b', marker="o")
         #ax.scatter(point['x'], point['y'],point['z'], s=20, c=Colors[key], marker="x")
     Index+=1    
-    # Convert timestamp to a datetime object
-    min_date = datetime.datetime.fromtimestamp(min(timestamp_list)/ 1000)
-    max_date = datetime.datetime.fromtimestamp(max(timestamp_list)/ 1000)
-    # Format datetime object as a string
-    min_date_string = min_date.strftime('%Y-%m-%d %H:%M:%S')
-    max_date_string = max_date.strftime('%Y-%m-%d %H:%M:%S')
-    print(f'{min_date_string}, {max_date_string}')
     canvas.draw()
-    screenshot = subprocess.check_output(["scrot", "-u", "-"], stderr=subprocess.DEVNULL)
-
-    # save the cropped screenshot as an image file
     filename = "plots/plot_{}.png".format(Index)  # include the counter variable in the filename
     fig.savefig(filename)
 

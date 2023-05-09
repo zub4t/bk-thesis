@@ -362,16 +362,6 @@ def generate_color_dict(some_set):
     return color_dict
 
 
-def find_lowest_sum_point(points):
-    point_distance_sums = []
-
-    for point in points:
-        distance_sum = sum(calculate_distance(point, other) for other in points if other != point)
-        point_distance_sums.append((point, distance_sum))
-
-    return min(point_distance_sums, key=lambda x: x[1])[0]
-
-
 def min_sum_distances_points(points):
     min_sum = float('inf')
     min_point = None
@@ -386,3 +376,45 @@ def min_sum_distances_points(points):
             min_sum = sum_dist
             min_point = p1
     return min_point 
+
+def filter_measurements(dict_of_measurements):
+    # Find the key with the smallest number of measurements
+    smallest_key = min(dict_of_measurements, key=lambda x: len(dict_of_measurements[x]))
+
+    # Find the timestamp of the first and last measurement in the smallest key list
+    smallest_timestamp_start = dict_of_measurements[smallest_key][0].timestamp
+    smallest_timestamp_end = dict_of_measurements[smallest_key][-1].timestamp
+
+    # Filter the measurements in each list to have the same number of measurements and matching timestamps
+    filtered_measurements = {}
+    for key, measurements in dict_of_measurements.items():
+        # Find the first measurement with a timestamp >= smallest_timestamp_start
+        i = 0
+        while i < len(measurements) and measurements[i].timestamp < smallest_timestamp_start:
+            i += 1
+
+        # Find the last measurement with a timestamp <= smallest_timestamp_end
+        j = len(measurements) - 1
+        while j >= 0 and measurements[j].timestamp > smallest_timestamp_end:
+            j -= 1
+
+        # Add the filtered measurements to the output dictionary
+        filtered_measurements[key] = measurements[i:j+1]
+
+    return filtered_measurements
+
+def calculate_mean_point(points):
+    if len(points) == 0:
+        return {'x': 0, 'y': 0, 'z': 0}
+
+    sum_x, sum_y, sum_z = 0, 0, 0
+    for point in points:
+        sum_x += point['x']
+        sum_y += point['y']
+        sum_z += point['z']
+
+    mean_x = sum_x / len(points)
+    mean_y = sum_y / len(points)
+    mean_z = sum_z / len(points)
+
+    return {'x': mean_x, 'y': mean_y, 'z': mean_z}

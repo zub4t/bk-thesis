@@ -27,7 +27,7 @@ gradient_descent = GradientDescent(
     learning_rate=0.01, max_iterations=1000, tolerance=1e-5
 )
 bias = lambda x: x / 1.16 - 0.63
-
+all_min_diff = []
 
 def main(log_name, exp_target, subgroup_size):
     def process(subgroup_size, exp):
@@ -35,6 +35,8 @@ def main(log_name, exp_target, subgroup_size):
             k: [obj for obj in v if obj.exp == exp]
             for k, v in measurements_dict.items()
         }
+        
+        filtered_dict = Util.filter_measurements(filtered_dict)
         print("my exp ", exp)
         averages_dict = {
             k: statistics.mean([obj.distance for obj in v])
@@ -97,16 +99,14 @@ def main(log_name, exp_target, subgroup_size):
 
             # Add legend
             ax.legend()
-            fig.savefig(f"{key}_{exp}_histogram.png")
+            fig.savefig(f"./histogram/{key}_{exp}_histogram.png")
 
-        lowest_point = Util.find_lowest_sum_point(all_pos)
         points_by_cluster = {}
         gt = {
             "x": mobile_location_dict[exp][0],
             "y": mobile_location_dict[exp][1],
             "z": mobile_location_dict[exp][2],
         }
-        lowest_point_distance = Util.calculate_distance(lowest_point, gt)
         for i, point in enumerate(all_pos):
             if cl[i] != -1:
                 if cl[i] in points_by_cluster:
@@ -132,19 +132,16 @@ def main(log_name, exp_target, subgroup_size):
             all_num_elements_in_cluster,
             all_mean,
             all_distance_to_real_loc,
-            lowest_point,
-            lowest_point_distance,
             log_name,
             min_point
         )
+        all_min_diff.append(min_point)
 
     def write_csv(
         exp_name,
         num_elements_in_cluster,
         mean_of_which_cluster,
         distance_to_real_loc,
-        lowest_point,
-        lowest_point_distance,
         file_path,
         min_point
     ):
@@ -154,12 +151,7 @@ def main(log_name, exp_target, subgroup_size):
                 num_elements_in_cluster,
                 mean_of_which_cluster,
                 distance_to_real_loc,
-<<<<<<< HEAD:report/wifi_rtt_histogram.py
-                [lowest_point] * len(mean_of_which_cluster),
-                [lowest_point_distance] * len(mean_of_which_cluster),
-=======
                 [min_point] * len(mean_of_which_cluster),
->>>>>>> b673137218dd7cb478a2675b30d99e4ca333e099:report/wifi_rtt.py
             )
         )
 
@@ -171,6 +163,7 @@ def main(log_name, exp_target, subgroup_size):
                     "num_elements_in_cluster",
                     "mean_of_which_cluster",
                     "distance_to_real_loc",
+                    "point_with_the_lowest_sum_of_distances"
                 ]
             )
             writer.writerows(data)
@@ -181,3 +174,12 @@ def main(log_name, exp_target, subgroup_size):
 for key in mobile_location_dict:
     print(key)
     main(f"./wifi_4/report_{key}_group_size_4.csv", str(key), 4)
+plt.clf()
+sorted_data = np.sort(all_min_diff)
+cumulative_probabilities = np.arange(len(sorted_data)) / float(len(sorted_data))
+plt.plot(sorted_data, cumulative_probabilities, marker='o')
+# Set the title and axis labels
+plt.title("Cumulative Distribution Function")
+plt.xlabel("Values")
+plt.ylabel("Cumulative Probability")
+plt.savefig('CDF_figure.png')
