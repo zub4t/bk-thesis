@@ -84,6 +84,15 @@ def plot():
     global Timestamp_list
     global Points_list
     global Sampled_list
+
+    m = []
+    for ap in Filtered_dict.keys():
+        measurement = Filtered_dict[ap][0]
+        measurement.distance = bias(measurement.distance)
+        m.append(measurement)
+
+    pos_using_all = gradient_descent.train(m, {"x": 0, "y": 0, "z": 0})
+    ax.scatter(pos_using_all['x'], pos_using_all['y'], s=20, c='green', marker="x")
     all_pos = []
     all_gt=[]
     for i, subgroup in enumerate(Subgroup_list):

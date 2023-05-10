@@ -1,4 +1,3 @@
-import csv
 import os
 import sys
 import json
@@ -30,14 +29,13 @@ bias = lambda x: x / 1.16 - 0.63
 all_min_diff = []
 all_using_all_m_diff = []
 all_using_mean_cluster = []
-def main(log_name, exp_target, subgroup_size):
+def main(exp_target, subgroup_size): 
     def process(subgroup_size, exp):
         filtered_dict = {
             k: [obj for obj in v if obj.exp == exp]
             for k, v in measurements_dict.items()
         }
         
-        filtered_dict = Util.filter_measurements(filtered_dict)
         print("my exp ", exp)
         averages_dict = {
             k: statistics.mean([obj.distance for obj in v])
@@ -122,70 +120,18 @@ def main(log_name, exp_target, subgroup_size):
                     points_by_cluster[cl[i]].append(point)
                 else:
                     points_by_cluster[cl[i]] = [point]
-        all_mean = []
-        all_num_elements_in_cluster = []
-        all_distance_to_real_loc = []
 
-        for key in points_by_cluster:
-            x = [p["x"] for p in points_by_cluster[key]]
-            y = [p["y"] for p in points_by_cluster[key]]
-            z = [p["z"] for p in points_by_cluster[key]]
-            mean_point = {"x": np.mean(x), "y": np.mean(y), "z": np.mean(z)}
-            all_mean.append(mean_point)
-            all_num_elements_in_cluster.append(len(points_by_cluster[key]))
-            all_distance_to_real_loc.append(Util.calculate_distance(gt, mean_point))
-            min_point = Util.calculate_distance(gt, Util.min_sum_distances_points(all_pos))
-
+        min_point = Util.calculate_distance(gt, Util.min_sum_distances_points(all_pos))
         most_populated_key = max(points_by_cluster, key=lambda x: len(points_by_cluster[x]))
         mean_point = Util.calculate_mean_point(points_by_cluster[most_populated_key])
-        all_using_mean_cluster.append(mean_point)
-        write_csv(
-            exp_target,
-            all_num_elements_in_cluster,
-            all_mean,
-            all_distance_to_real_loc,
-            log_name,
-            min_point
-        )
+        all_using_mean_cluster.append(Util.calculate_distance(gt,mean_point))
         all_min_diff.append(min_point)
-
-    def write_csv(
-        exp_name,
-        num_elements_in_cluster,
-        mean_of_which_cluster,
-        distance_to_real_loc,
-        file_path,
-        min_point
-    ):
-        data = list(
-            zip(
-                [exp_name] * len(mean_of_which_cluster),
-                num_elements_in_cluster,
-                mean_of_which_cluster,
-                distance_to_real_loc,
-                [min_point] * len(mean_of_which_cluster),
-            )
-        )
-
-        with open(file_path, "w", newline="") as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(
-                [
-                    "exp_name",
-                    "num_elements_in_cluster",
-                    "mean_of_which_cluster",
-                    "distance_to_real_loc",
-                    "point_with_the_lowest_sum_of_distances"
-                ]
-            )
-            writer.writerows(data)
-
-    log(exp_target, subgroup_size)
+    log(exp_target,subgroup_size)
 
 
 for key in mobile_location_dict:
     print(key)
-    main(f"./wifi_4/report_{key}_group_size_4.csv", str(key), 4)
+    main(str(key), 4)
 #using the point obtanied in the min sum
 plt.clf()
 sorted_data = np.sort(all_min_diff)
@@ -217,4 +163,4 @@ plt.plot(sorted_data, cumulative_probabilities, marker='o')
 plt.title("Cumulative Distribution Function")
 plt.xlabel("Values")
 plt.ylabel("Cumulative Probability")
-plt.savefig('CDF_USING_ALL.png')
+plt.savefig('CDF_USING_MEAN_CLUSTER.png')

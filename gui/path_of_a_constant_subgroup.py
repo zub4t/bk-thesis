@@ -1,11 +1,8 @@
 import os
-import subprocess
 from PIL import Image, ImageTk
 from collections import Counter
 import sys
 import json
-import statistics
-import random
 
 cwd = os.getcwd()
 sys.path.insert(0, os.path.join(cwd, "../classes"))
@@ -116,8 +113,8 @@ def plot():
             all_pos[subgroup].append(position)
         else:
             all_pos[subgroup] = [position]
-        for ap in Sampled_list: 
-            Filtered_dict[ap].pop(0)
+    for ap in Sampled_list: 
+        Filtered_dict[ap].pop(0)
     column=10    
     for i,key in enumerate(all_pos):
         point = all_pos[key][0]
@@ -141,7 +138,7 @@ def plot():
         #ax.scatter(point['x'], point['y'],point['z'], s=20, c=Colors[key], marker="x")
     Index+=1    
     canvas.draw()
-    filename = "plots/plot_{}.png".format(Index)  # include the counter variable in the filename
+    filename = "plots_constant_subgroup/plot_{}.png".format(Index)  # include the counter variable in the filename
     fig.savefig(filename)
 
 button = tk.Button(controls_frame, text="Plot", command=plot)
@@ -161,4 +158,6 @@ Colors = Util.generate_color_dict_v1(set(Subgroup_list))
 Index = 0
 Points_list = Util.generate_intermediate_points(Measurement.points_exp)
 
-root.mainloop()
+#root.mainloop()
+while(True):
+    plot()
