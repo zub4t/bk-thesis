@@ -137,7 +137,7 @@ def plot():
         ax.scatter(gt['x'], gt['y'], s=20, c='b', marker="o")
     Index+=1    
     canvas.draw()
-    filename = "plots/plot_{}.png".format(Index)  # include the counter variable in the filename
+    filename = "plots_comparison/plot_{}.png".format(Index)  # include the counter variable in the filename
     fig.savefig(filename)
 
 button = tk.Button(controls_frame, text="Plot", command=plot)
@@ -156,5 +156,6 @@ Colors = None
 Colors = Util.generate_color_dict_v1(set(Subgroup_list))
 Index = 0
 Points_list = Util.generate_intermediate_points(Measurement.points_exp)
-
-root.mainloop()
+#root.mainloop()
+while(True):
+    plot()

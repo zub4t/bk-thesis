@@ -28,7 +28,8 @@ gradient_descent = GradientDescent(
 )
 bias = lambda x: x / 1.16 - 0.63
 all_min_diff = []
-
+all_using_all_m_diff = []
+all_using_mean_cluster = []
 def main(log_name, exp_target, subgroup_size):
     def process(subgroup_size, exp):
         filtered_dict = {
@@ -47,12 +48,20 @@ def main(log_name, exp_target, subgroup_size):
         )
         all_pos = []
         pos_by_ap = {}
-
+        pos_using_all = None
         gt = {
             "x": mobile_location_dict[exp][0],
             "y": mobile_location_dict[exp][1],
             "z": mobile_location_dict[exp][2],
         }
+        m = []
+        for ap in filtered_dict.keys():
+            measurement = filtered_dict[ap][0]
+            measurement.distance = averages_dict[ap]
+            measurement.distance = bias(measurement.distance)
+            m.append(measurement)
+
+        all_using_all_m_diff.append(Util.calculate_distance(gt,gradient_descent.train(m, {"x": 0, "y": 0, "z": 0})))
         for i, subgroup in enumerate(subgroup_list):
             measurements = []
             for ap in subgroup:
@@ -75,7 +84,7 @@ def main(log_name, exp_target, subgroup_size):
 
     def log(exp, subgroup):
         all_pos, cl, pos_by_ap = process(subgroup, exp)
-        print(pos_by_ap)
+
         for key, value in pos_by_ap.items():
             # Calculate mean and standard deviation
             mean = np.mean(value)
@@ -127,6 +136,9 @@ def main(log_name, exp_target, subgroup_size):
             all_distance_to_real_loc.append(Util.calculate_distance(gt, mean_point))
             min_point = Util.calculate_distance(gt, Util.min_sum_distances_points(all_pos))
 
+        most_populated_key = max(points_by_cluster, key=lambda x: len(points_by_cluster[x]))
+        mean_point = Util.calculate_mean_point(points_by_cluster[most_populated_key])
+        all_using_mean_cluster.append(mean_point)
         write_csv(
             exp_target,
             all_num_elements_in_cluster,
@@ -174,6 +186,7 @@ def main(log_name, exp_target, subgroup_size):
 for key in mobile_location_dict:
     print(key)
     main(f"./wifi_4/report_{key}_group_size_4.csv", str(key), 4)
+#using the point obtanied in the min sum
 plt.clf()
 sorted_data = np.sort(all_min_diff)
 cumulative_probabilities = np.arange(len(sorted_data)) / float(len(sorted_data))
@@ -182,4 +195,26 @@ plt.plot(sorted_data, cumulative_probabilities, marker='o')
 plt.title("Cumulative Distribution Function")
 plt.xlabel("Values")
 plt.ylabel("Cumulative Probability")
-plt.savefig('CDF_figure.png')
+plt.savefig('CDF_LOWEST_SUM.png')
+#using all measurements to obtain the point
+
+plt.clf()
+sorted_data = np.sort(all_using_all_m_diff)
+cumulative_probabilities = np.arange(len(sorted_data)) / float(len(sorted_data))
+plt.plot(sorted_data, cumulative_probabilities, marker='o')
+# Set the title and axis labels
+plt.title("Cumulative Distribution Function")
+plt.xlabel("Values")
+plt.ylabel("Cumulative Probability")
+plt.savefig('CDF_USING_ALL.png')
+
+
+plt.clf()
+sorted_data = np.sort(all_using_mean_cluster)
+cumulative_probabilities = np.arange(len(sorted_data)) / float(len(sorted_data))
+plt.plot(sorted_data, cumulative_probabilities, marker='o')
+# Set the title and axis labels
+plt.title("Cumulative Distribution Function")
+plt.xlabel("Values")
+plt.ylabel("Cumulative Probability")
+plt.savefig('CDF_USING_ALL.png')
