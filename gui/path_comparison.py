@@ -20,18 +20,18 @@ from GradientDescentFixedZ import GradientDescent
 from Measurement import Measurement
 colors=None
 measurements_dict, mobile_location_dict = Util.read_json_file(
-    "../JSON/file.json", "uwb"
+    "../JSON/file.json", "802.11mc"
 )
 with open("../JSON/AP_location.json", "r") as f:
     ap_location_raw = json.load(f)
 ap_locations = {}
 for e in ap_location_raw:
-    ap_locations[e["ID"]] = {"x": e["X"], "y": e["Y"], "z": e["Z"]}
+    ap_locations[e["BSSID"]] = {"x": e["X"], "y": e["Y"], "z": e["Z"]}
 # create the main window
 gradient_descent = GradientDescent(
     learning_rate=0.01, max_iterations=1000, tolerance=1e-5
 )
-bias = lambda x: x #/ 1.16 - 0.63
+bias = lambda x: x / 1.16 - 0.63
 
 
 def process(subgroup_size, exp):
@@ -40,7 +40,7 @@ def process(subgroup_size, exp):
         k: [obj for obj in v if obj.exp == exp] for k, v in measurements_dict.items() if any(obj.exp == exp for obj in v)
     }
 
-    filtered_dict = Util.filter_measurements(filtered_dict)
+    #filtered_dict = Util.filter_measurements(filtered_dict)
     sampled_list = list(filtered_dict.keys())
     subgroup_list = Util.generate_subgroups(subgroup_size, arr=sampled_list)
     return filtered_dict, subgroup_list,sampled_list
@@ -138,10 +138,10 @@ def plot():
                 points_by_cluster[cl[i]].append(point)
             else:
                 points_by_cluster[cl[i]] = [point]
-    
-    most_populated_key = max(points_by_cluster, key=lambda x: len(points_by_cluster[x]))
-    mean_point = Util.calculate_mean_point(points_by_cluster[most_populated_key])
-    ax.scatter(mean_point['x'], mean_point['y'], s=20, c='red', marker="x")
+     
+   # most_populated_key = max(points_by_cluster, key=lambda x: len(points_by_cluster[x]))
+    #mean_point = Util.calculate_mean_point(points_by_cluster[most_populated_key])
+    #ax.scatter(mean_point['x'], mean_point['y'], s=20, c='red', marker="x")
     for gt in all_gt:
         ax.scatter(gt['x'], gt['y'], s=20, c='b', marker="o")
     Index+=1    
@@ -154,7 +154,7 @@ button.pack(side=tk.LEFT)
 
 # create an input text box
 entry_exp = tk.Entry(controls_frame)
-entry_exp.insert(0, "EXP_56")
+entry_exp.insert(0, "EXP_73")
 entry_exp.pack(side=tk.LEFT)
 # start the main event loop
 Timestamp_list = Util.read_timestamps(

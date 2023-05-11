@@ -14,18 +14,18 @@ from Measurement import Measurement
 
 
 measurements_dict, mobile_location_dict = Util.read_json_file(
-    "../JSON/new_file.json", "802.11mc"
+    "../JSON/new_file.json", "uwb"
 )
 with open("../JSON/AP_location.json", "r") as f:
     ap_location_raw = json.load(f)
 ap_locations = {}
 for e in ap_location_raw:
-    ap_locations[e["BSSID"]] = {"x": e["X"], "y": e["Y"], "z": e["Z"]}
+    ap_locations[e["ID"]] = {"x": e["X"], "y": e["Y"], "z": e["Z"]}
 # create the main window
 gradient_descent = GradientDescent(
     learning_rate=0.01, max_iterations=1000, tolerance=1e-5
 )
-bias = lambda x: x / 1.16 - 0.63
+bias = lambda x: x #/ 1.16 - 0.63
 all_min_diff = []
 all_using_all_m_diff = []
 all_using_mean_cluster = []

@@ -17,7 +17,7 @@ from GradientDescentFixedZ import GradientDescent
 from Measurement import Measurement
 colors=None
 measurements_dict, mobile_location_dict = Util.read_json_file(
-    "../JSON/file.json", "uwb"
+    "../JSON/file.json", "802.11mc"
 )
 with open("../JSON/AP_location.json", "r") as f:
     ap_location_raw = json.load(f)
@@ -36,9 +36,10 @@ def process(subgroup_size, exp):
     filtered_dict = {
         k: [obj for obj in v if obj.exp == exp] for k, v in measurements_dict.items() if any(obj.exp == exp for obj in v)
     }
-
+    print(filtered_dict.keys())
     filtered_dict = Util.filter_measurements(filtered_dict)
-    sampled_list = ['5A0A','111F','D018','D713','120F','868C']
+    #sampled_list = ['5A0A','111F','D018','D713','120F','868C']
+    sampled_list =['b0:6a:41:dc:c5:f0', '3c:28:6d:86:33:55', 'b0:6a:41:87:69:26', '38:8b:59:d2:8f:32', 'b0:6a:41:87:63:a6', '58:cb:52:d1:82:87', '3c:28:6d:86:2b:4c', 'b0:6a:41:87:66:2f']
     subgroup_list = Util.generate_subgroups(subgroup_size, arr=sampled_list)
     all_pos = {}
     return filtered_dict, subgroup_list,sampled_list
@@ -125,12 +126,12 @@ def plot():
             x_random = (i%4)*2  
         else:
             column -=1
-        ax.scatter(x_random, y_random)
-        ax.plot([x_random, point['x']], [y_random, point['y']],linestyle=":",alpha=0.4)
+        #ax.scatter(x_random, y_random)
+        #ax.plot([x_random, point['x']], [y_random, point['y']],linestyle=":",alpha=0.4)
 
         text_x = x_random + 0.2  # add a small offset to the x coordinate
         text_y = y_random
-        ax.text(text_x, text_y, text,fontsize=8)
+        #ax.text(text_x, text_y, text,fontsize=8)
         ax.scatter(point['x'], point['y'], s=20, c=Colors[key], marker="x")
 
     for gt in all_gt:
