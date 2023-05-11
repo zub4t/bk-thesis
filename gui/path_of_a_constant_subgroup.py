@@ -23,12 +23,12 @@ with open("../JSON/AP_location.json", "r") as f:
     ap_location_raw = json.load(f)
 ap_locations = {}
 for e in ap_location_raw:
-    ap_locations[e["ID"]] = {"x": e["X"], "y": e["Y"], "z": e["Z"]}
+    ap_locations[e["BSSID"]] = {"x": e["X"], "y": e["Y"], "z": e["Z"]}
 # create the main window
 gradient_descent = GradientDescent(
     learning_rate=0.01, max_iterations=1000, tolerance=1e-5
 )
-bias = lambda x: x #/ 1.16 - 0.63
+bias = lambda x: x / 1.16 - 0.63
 
 
 def process(subgroup_size, exp):
@@ -146,7 +146,7 @@ button.pack(side=tk.LEFT)
 
 # create an input text box
 entry_exp = tk.Entry(controls_frame)
-entry_exp.insert(0, "EXP_56")
+entry_exp.insert(0, "EXP_73")
 entry_exp.pack(side=tk.LEFT)
 # start the main event loop
 Timestamp_list = Util.read_timestamps(
