@@ -31,3 +31,7 @@ class Measurement:
         self.exp= exp
     def __repr__(self):
         return (f"Timestamp: {self.timestamp:.1f}, BSSID: {self.bssid}, Distance: {self.distance:.2f}, Ground Truth Distance: {self.ground_truth}, Source: {self.source}, EXP: {self.exp}")
+    def __eq__(self, other):
+        if isinstance(other, Measurement):
+            return self.timestamp == other.timestamp and self.distance == other.distance
+        return False

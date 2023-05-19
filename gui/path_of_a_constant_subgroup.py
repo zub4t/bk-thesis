@@ -1,164 +1,114 @@
 import os
-from PIL import Image, ImageTk
-from collections import Counter
 import sys
 import json
-
-cwd = os.getcwd()
-sys.path.insert(0, os.path.join(cwd, "../classes"))
-sys.path.insert(0, os.path.join(cwd, "../commons"))
-import Util
 import tkinter as tk
+from PIL import Image, ImageTk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from sklearn.cluster import DBSCAN
 import numpy as np
+import random
+cwd = os.getcwd()
+sys.path.insert(0, os.path.join(cwd, "../classes"))
+sys.path.insert(0, os.path.join(cwd, "../commons"))
+
 from GradientDescentFixedZ import GradientDescent
 from Measurement import Measurement
-colors=None
-measurements_dict, mobile_location_dict = Util.read_json_file(
-    "../JSON/file.json", "802.11mc"
-)
-with open("../JSON/AP_location.json", "r") as f:
-    ap_location_raw = json.load(f)
-ap_locations = {}
-for e in ap_location_raw:
-    ap_locations[e["BSSID"]] = {"x": e["X"], "y": e["Y"], "z": e["Z"]}
-# create the main window
-gradient_descent = GradientDescent(
-    learning_rate=0.01, max_iterations=1000, tolerance=1e-5
-)
-bias = lambda x: x / 1.16 - 0.63
-
-
-def process(subgroup_size, exp):
-
-    filtered_dict = {
-        k: [obj for obj in v if obj.exp == exp] for k, v in measurements_dict.items() if any(obj.exp == exp for obj in v)
-    }
-    print(filtered_dict.keys())
-    filtered_dict = Util.filter_measurements(filtered_dict)
-    #sampled_list = ['5A0A','111F','D018','D713','120F','868C']
-    sampled_list =['b0:6a:41:dc:c5:f0', '3c:28:6d:86:33:55', 'b0:6a:41:87:69:26', '38:8b:59:d2:8f:32', 'b0:6a:41:87:63:a6', '58:cb:52:d1:82:87', '3c:28:6d:86:2b:4c', 'b0:6a:41:87:66:2f']
-    subgroup_list = Util.generate_subgroups(subgroup_size, arr=sampled_list)
-    all_pos = {}
-    return filtered_dict, subgroup_list,sampled_list
-    #cl = all_pos.keys()
-root = tk.Tk()
-root.attributes("-fullscreen", True)
-root.title("WiFi path 6 of 4")
-# create a figure for the plot
-fig = Figure(figsize=(6, 4), dpi=100)
-
-# create a canvas to display the plot
-canvas = FigureCanvasTkAgg(fig, master=root)
-canvas.draw()
-#canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-# create a frame for the buttons
-controls_frame = tk.Frame(root)
-controls_frame.pack(side=tk.BOTTOM)
-
-def plot():
-
-    fig.clf()
-    ax = fig.add_subplot(111) 
-    ax.set_xlim([-1, 10])
-    ax.set_ylim([-5, 10])
-   # ax.set_zlim([0, 10])
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-    #ax.set_zlabel("Z")
-    real_person_path = Util.interpolate_points(Measurement.points_exp, 20)
-
-    x = [point["x"] for point in real_person_path]
-    y = [point["y"] for point in real_person_path]
-    #z = [point["z"] for point in real_person_path]
-    #ax.scatter(x, y, z, c="r", marker="o")
-    ax.scatter(x, y, c="r", marker="o")
-    global Colors
-    global Subgroup_list 
-    global Filtered_dict
-    global Index
-    global Timestamp_list
-    global Points_list
-    global Sampled_list
-    all_pos = {}
-    all_gt=[]
-    for i, subgroup in enumerate(Subgroup_list):
-        measurements = []
-        for ap in subgroup:
-            try:
-                measurement = Filtered_dict[ap][0]
-                measurement.distance = bias(measurement.distance)
-                measurement.ground_truth = (
-                                           Util.interpolate_from_timestamp_to_location(
-                                                Points_list,
-                                                Timestamp_list,
-                                                measurement.timestamp,
-                                            )
-                                        )
-                measurements.append(measurement)
-            except:
-                print("e")
-        position = gradient_descent.train(measurements, {"x": 0, "y": 0, "z": 0})
-        min_timestamp = min(m.timestamp for m in measurements)
-        max_timestamp = max(m.timestamp for m in measurements)
-        time_diff_milliseconds = max_timestamp - min_timestamp
-        time_diff_seconds = time_diff_milliseconds / 1000
-
-        print(f"Time difference in milliseconds: {time_diff_seconds}")
-#        if time_diff_seconds <=1:
-        all_gt.append(measurements[0].ground_truth)
-        if subgroup in all_pos:
-            all_pos[subgroup].append(position)
-        else:
-            all_pos[subgroup] = [position]
-    for ap in Sampled_list: 
-        Filtered_dict[ap].pop(0)
-    column=10    
-    for i,key in enumerate(all_pos):
-        point = all_pos[key][0]
-        text = f"{key}"
-        y_random = column  
-        x_random = (i%4)*2  
-        if(i%4 !=0):
-            x_random = (i%4)*2  
-        else:
-            column -=1
-        #ax.scatter(x_random, y_random)
-        #ax.plot([x_random, point['x']], [y_random, point['y']],linestyle=":",alpha=0.4)
-
-        text_x = x_random + 0.2  # add a small offset to the x coordinate
-        text_y = y_random
-        #ax.text(text_x, text_y, text,fontsize=8)
-        ax.scatter(point['x'], point['y'], s=20, c=Colors[key], marker="x")
-
-    for gt in all_gt:
-        ax.scatter(gt['x'], gt['y'], s=20, c='b', marker="o")
-        #ax.scatter(point['x'], point['y'],point['z'], s=20, c=Colors[key], marker="x")
-    Index+=1    
-    canvas.draw()
-    filename = "plots_constant_subgroup/plot_{}.png".format(Index)  # include the counter variable in the filename
-    fig.savefig(filename)
-
-button = tk.Button(controls_frame, text="Plot", command=plot)
-button.pack(side=tk.LEFT)
-
-# create an input text box
-entry_exp = tk.Entry(controls_frame)
-entry_exp.insert(0, "EXP_73")
-entry_exp.pack(side=tk.LEFT)
-# start the main event loop
-Timestamp_list = Util.read_timestamps(
-            f"../CHECKPOINTS/CHECKPOINT_EXP_73"
+import Util
+class WiFiPathPlotter:
+    def __init__(self, root, fig, canvas, controls_frame, entry_exp):
+        self.root = root
+        self.fig = fig
+        self.canvas = canvas
+        self.controls_frame = controls_frame
+        self.entry_exp = entry_exp
+        self.colors = None
+        self.index = 0
+        self.filtered_dict, self.subgroup_list, self.sampled_list = self.process(4, entry_exp.get())
+        self.timestamp_list = Util.read_timestamps(f"../CHECKPOINTS/CHECKPOINT_EXP_73")
+        self.points_list = Util.generate_intermediate_points(Measurement.points_exp)
+        self.colors = Util.generate_color_dict_v1(set(self.subgroup_list))
+        self.gradient_descent = GradientDescent(
+            learning_rate=0.01, max_iterations=1000, tolerance=1e-5
         )
-Filtered_dict, Subgroup_list,Sampled_list = process(4, entry_exp.get())
-Colors = None
-Colors = Util.generate_color_dict_v1(set(Subgroup_list))
-Index = 0
-Points_list = Util.generate_intermediate_points(Measurement.points_exp)
+        self.bias = lambda x: x / 1.16 - 0.63
 
-#root.mainloop()
-while(True):
-    plot()
+    def process(self, subgroup_size, exp):
+        measurements_dict, mobile_location_dict = Util.read_json_file("../JSON/file.json", "802.11mc")
+        filtered_dict = {
+            k: [obj for obj in v if obj.exp == exp] for k, v in measurements_dict.items() if any(obj.exp == exp for obj in v)
+        }
+        sampled_list = random.sample(filtered_dict.keys(), 6)
+        #sampled_list = ['5A0A','111F','D018','D713','120F','868C']
+        subgroup_list = Util.generate_subgroups(subgroup_size, arr=sampled_list)
+        return filtered_dict, subgroup_list, sampled_list
+
+    def plot(self):
+        self.fig.clf()
+        ax = self.fig.add_subplot(111)
+        ax.set_xlim([-1, 10])
+        ax.set_ylim([-5, 10])
+        ax.set_xlabel("X")
+        ax.set_ylabel("Y")
+        real_person_path = Util.interpolate_points(Measurement.points_exp, 20)
+        x = [point["x"] for point in real_person_path]
+        y = [point["y"] for point in real_person_path]
+        ax.scatter(x, y, c="r", marker="o")
+        measurement_buckets = Util.bucket_measurements(self.filtered_dict, 1000)
+        print(measurement_buckets)
+        try:
+            measurements = next(measurement_buckets)
+            self.process_measurements(measurements, ax)
+        except StopIteration:
+            print("No more data")
+        self.plot()
+
+    def process_measurements(self, measurements, ax):
+        for key, measurement in measurements.items():
+            measurement.distance = self.bias(measurement.distance)
+            measurement.ground_truth = (
+                Util.interpolate_from_timestamp_to_location(
+                    self.points_list,
+                    self.timestamp_list,
+                    measurement.timestamp,
+                )
+            )
+
+        for i, subgroup in enumerate(self.subgroup_list):
+            subgroup_measurements = []
+            include_point = True
+            for ap in subgroup:
+                try:
+                    subgroup_measurements.append(measurements[ap])
+                except KeyError:
+                    include_point = False
+            if include_point:
+                position = self.gradient_descent.train(subgroup_measurements, {"x": 0, "y": 0, "z": 0})
+                ax.scatter(position['x'], position['y'], s=20, c=self.colors[subgroup], marker="x")
+                all_gt = [x.ground_truth for x in subgroup_measurements]
+                for gt in all_gt:
+                    ax.scatter(gt['x'], gt['y'], s=20, c='b', marker="o")
+
+        self.index += 1
+        self.canvas.draw()
+        filename = "plots_comparison/plot_{}.png".format(self.index)
+        self.fig.savefig(filename)
+
+if __name__ == "__main__":
+    root = tk.Tk()
+
+    root.title("WiFi path 6 of 4")
+    fig = Figure(figsize=(6, 4), dpi=100)
+    canvas = FigureCanvasTkAgg(fig, master=root)
+    canvas.draw()
+    canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+    controls_frame = tk.Frame(root)
+    controls_frame.pack(side=tk.BOTTOM)
+    entry_exp = tk.Entry(controls_frame)
+    entry_exp.insert(0, "EXP_73")
+    entry_exp.pack(side=tk.LEFT)
+    plotter = WiFiPathPlotter(root, fig, canvas, controls_frame, entry_exp)
+    button = tk.Button(controls_frame, text="Plot", command=plotter.plot)
+    button.pack(side=tk.LEFT)
+    root.mainloop()
+

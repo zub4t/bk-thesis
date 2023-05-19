@@ -402,6 +402,25 @@ def filter_measurements(dict_of_measurements):
         filtered_measurements[key] = measurements[i:j+1]
 
     return filtered_measurements
+def get_measurements(data, keys=None, time_window=100):
+    # If no list of keys is provided, use all keys in the dictionary
+    if keys is None:
+        keys = data.keys()
+
+    # First, get the earliest timestamp among all first measurements of the given keys
+    base_timestamp = min(data[k][0].timestamp for k in keys)
+
+    # For each key, find the first measurement that falls within the time window of the base timestamp
+    result = {}
+    for key in keys:
+        measurements = data.get(key)
+        if measurements is not None:
+            for measurement in measurements:
+                if abs(measurement.timestamp - base_timestamp) <= time_window:
+                    result[key]=measurement
+                    break  # Once we find a match, we don't need to check the rest of the measurements for this key
+
+    return result
 
 def calculate_mean_point(points):
     if len(points) == 0:
@@ -418,3 +437,29 @@ def calculate_mean_point(points):
     mean_z = sum_z / len(points)
 
     return {'x': mean_x, 'y': mean_y, 'z': mean_z}
+
+def bucket_measurements(measurements_dict, window_ms):
+    # Create a sorted list of tuples (key, first timestamp)
+    timestamps = sorted((key, m_list[0].timestamp) for key, m_list in measurements_dict.items() if m_list)
+    base_timestamp = timestamps[-1][1]  # The biggest timestamp in the first position
+
+    while True:
+        bucket = {}
+        for key, measurements in measurements_dict.items():
+            # Filter measurements that are within the window
+            within_window = [m for m in measurements if base_timestamp <= m.timestamp < base_timestamp + window_ms]
+            if within_window:
+                # If more than one measurement falls into this window, take the average
+                avg_distance = sum(m.distance for m in within_window) / len(within_window)
+                avg_timestamp = sum(m.timestamp for m in within_window) // len(within_window)
+                avg_measurement = Measurement(avg_timestamp,key,avg_distance,0, within_window[0].ap_location)
+                bucket[key] = avg_measurement
+                # Remove used measurements from the original list
+                measurements_dict[key] = [m for m in measurements if m not in within_window]
+
+        if not bucket:
+            break  # No more data
+
+        yield bucket  # Return the current bucket and pause execution
+
+        base_timestamp += window_ms
