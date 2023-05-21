@@ -35,3 +35,6 @@ class Measurement:
         if isinstance(other, Measurement):
             return self.timestamp == other.timestamp and self.distance == other.distance
         return False
+    
+    def __hash__(self):
+        return hash((self.distance, self.timestamp))

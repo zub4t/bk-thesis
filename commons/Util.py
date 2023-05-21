@@ -463,3 +463,13 @@ def bucket_measurements(measurements_dict, window_ms):
         yield bucket  # Return the current bucket and pause execution
 
         base_timestamp += window_ms
+def create_cdf_plot(data, filename):
+    sorted_data = np.sort(data)
+    cumulative_probabilities = np.arange(len(sorted_data)) / float(len(sorted_data))
+    plt.plot(sorted_data, cumulative_probabilities, marker='.')
+    plt.title("Cumulative Distribution Function")
+    plt.xlabel("Values")
+    plt.ylabel("Cumulative Probability")
+    plt.savefig(filename)
+    plt.clf()
+
