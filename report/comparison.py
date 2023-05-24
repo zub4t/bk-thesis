@@ -16,11 +16,44 @@ from sklearn.preprocessing import MinMaxScaler
 cwd = os.getcwd()
 sys.path.insert(0, os.path.join(cwd, "../classes"))
 sys.path.insert(0, os.path.join(cwd, "../commons"))
-from GradientDescentFixedZ import GradientDescent
 # Assuming these are your custom classes
-from GradientDescentFixedZ import GradientDescent
+from GradientDescent import GradientDescent
 from Measurement import Measurement
 import Util
+from pykalman import KalmanFilter
+
+class MyKalmanFilter:
+    def __init__(self, initial_state, initial_state_covariance):
+        self.kf = KalmanFilter(initial_state_mean=initial_state,
+                               initial_state_covariance=initial_state_covariance)
+    def update(self, observed_points):
+        # Assume the state transition is identity and observation model is identity
+        # This means the state does not change over time and the observed point is the state
+        # Also assume the noise covariances are identity matrices
+        # These assumptions may not be valid for your specific problem
+        transition_matrix = np.eye(3)
+        observation_matrix = np.eye(3)
+        transition_covariance = np.eye(3)
+        observation_covariance = np.eye(3)
+
+        for observed_point in observed_points:
+            # Convert the observed point from a dictionary to a 1D array
+            observed_point_array = np.array([observed_point['x'], observed_point['y'], observed_point['z']])
+
+            (state_mean, state_covariance) = self.kf.filter_update(
+                self.kf.initial_state_mean,
+                self.kf.initial_state_covariance,
+                observation=observed_point_array,
+                transition_matrix=transition_matrix,
+                observation_matrix=observation_matrix,
+                transition_covariance=transition_covariance,
+                observation_covariance=observation_covariance
+            )
+
+        self.kf.initial_state_mean = state_mean
+        self.kf.initial_state_covariance = state_covariance
+    def get_state(self):
+        return self.kf.initial_state_mean
 
 class ParticleFilter:
     def __init__(self, num_particles, space_constraints, motion_model, measurement_model):
@@ -57,7 +90,7 @@ class ParticleFilter:
 
         total_weight = sum(particle['weight'] for particle in self.particles)
         for particle in self.particles:
-            particle['weight'] /= total_weight
+            particle['weight'] /= total_weight + 1e-9
 
     def _resample_particles(self):
         weights = [particle['weight'] for particle in self.particles]
@@ -121,7 +154,8 @@ def constellation_to_single_point(points):
         distance = math.sqrt((particle['x'] - observed_point['x'])**2 +
                              (particle['y'] - observed_point['y'])**2 +
                              (particle['z'] - observed_point['z'])**2)
-        return distance
+        likelihood = math.exp(-distance)
+        return likelihood
 
     num_particles = 100
     space_constraints = {'x_min': 0, 'x_max': 10, 'y_min': 0, 'y_max': 6, 'z_min': 0, 'z_max': 4}
@@ -129,10 +163,20 @@ def constellation_to_single_point(points):
     particle_filter = ParticleFilter(num_particles, space_constraints, motion_model, measurement_model)
     particle_filter.update(points)
     particle_filter_point = particle_filter.get_most_likely_particle()
-
+    particle_filter_point = np.array([particle_filter_point['x'],particle_filter_point['y'],particle_filter_point['z']])
     #kalman_filter_point = kf.estimate()
-    print(particle_filter_point)
-    return [mean_point, min_sum_point]#, kalman_filter_point
+    print("particle filter ",particle_filter_point)
+    initial_state = np.array([0, 0, 0])  # Initial position is (0, 0, 0)
+    initial_state_covariance = np.eye(3)  # Initial state covariance is identity matrix
+
+    kf = MyKalmanFilter(initial_state, initial_state_covariance)
+
+
+    kf.update(points)
+
+    output_position = kf.get_state()
+    print("kalman",output_position)
+    return [mean_point, min_sum_point,particle_filter_point]#, kalman_filter_point
 
 # Step 3: Mean of Single Points
 def mean_of_single_points(points):
@@ -170,9 +214,12 @@ def main():
             return x / 1.16 - 0.63
         else:
             return x
-
+    diff = []
     # Loop over all experiments
-    for exp in range(1, 11):  # Assuming there are 10 experiments
+    for exp in range(1, 45):  # Assuming there are 10 experiments
+
+        gt=mobile_location_dict[f'EXP_{exp}']
+        gt={'x':gt[0],'y':gt[1],'z':gt[2]}
         print("working on ",exp)
         # Filter measurements for the current experiment
         filtered_dict = {
@@ -206,8 +253,12 @@ def main():
 
         # Step 3
         final_position = mean_of_single_points(single_points)
-
-        print('my final position is ',final_position)
+        final_position = {'x':final_position[0],'y':final_position[1],'z':final_position[2]}
+        df =Util.calculate_distance(gt,final_position)
+        print('df',df)
+        print('final position vs gt ',final_position,gt)
+        diff.append(df)
+    Util.create_cdf_plot(diff, 'CDF_newA.png')
 if __name__ == "__main__":
     main()
 
