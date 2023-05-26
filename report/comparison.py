@@ -153,7 +153,7 @@ def plot_cdfs(data, labels):
     # Add legend, grid and show the plot
     plt.legend(loc='upper left')
     plt.grid(True)
-    plt.show()
+    plt.savefig("CDF_LAST.PNG")
 
 def main():
     # Prompt user for technology choice
