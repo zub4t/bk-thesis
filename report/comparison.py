@@ -20,40 +20,6 @@ sys.path.insert(0, os.path.join(cwd, "../commons"))
 from GradientDescent import GradientDescent
 from Measurement import Measurement
 import Util
-# from pykalman import KalmanFilter
-#
-# class MyKalmanFilter:
-#     def __init__(self, initial_state, initial_state_covariance):
-#         self.kf = KalmanFilter(initial_state_mean=initial_state,
-#                                initial_state_covariance=initial_state_covariance)
-#     def update(self, observed_points):
-#         # Assume the state transition is identity and observation model is identity
-#         # This means the state does not change over time and the observed point is the state
-#         # Also assume the noise covariances are identity matrices
-#         # These assumptions may not be valid for your specific problem
-#         transition_matrix = np.eye(3)
-#         observation_matrix = np.eye(3)
-#         transition_covariance = np.eye(3)
-#         observation_covariance = np.eye(3)
-#
-#         for observed_point in observed_points:
-#             # Convert the observed point from a dictionary to a 1D array
-#             observed_point_array = np.array([observed_point['x'], observed_point['y'], observed_point['z']])
-#
-#             (state_mean, state_covariance) = self.kf.filter_update(
-#                 self.kf.initial_state_mean,
-#                 self.kf.initial_state_covariance,
-#                 observation=observed_point_array,
-#                 transition_matrix=transition_matrix,
-#                 observation_matrix=observation_matrix,
-#                 transition_covariance=transition_covariance,
-#                 observation_covariance=observation_covariance
-#             )
-#
-#         self.kf.initial_state_mean = state_mean
-#         self.kf.initial_state_covariance = state_covariance
-#     def get_state(self):
-#         return self.kf.initial_state_mean
 
 class ParticleFilter:
     def __init__(self, num_particles, space_constraints, motion_model, measurement_model):
@@ -114,9 +80,9 @@ class ParticleFilter:
         self._resample_particles()
 
     def get_most_likely_particle(self):
-        max_weight = 0.0
+        max_weight = -np.inf
         most_likely_particle = None
-
+        #print(self.particles)
         for particle in self.particles:
             if particle['weight'] > max_weight:
                 max_weight = particle['weight']
@@ -159,31 +125,32 @@ def constellation_to_single_point(points):
         likelihood = math.exp(-distance)
         return likelihood
 
-    num_particles = 100
+    num_particles = 10000
     space_constraints = {'x_min': 0, 'x_max': 10, 'y_min': 0, 'y_max': 6, 'z_min': 0, 'z_max': 4}
     motion_model = {'velocity_x': 0, 'velocity_y': 0, 'velocity_z': 0}
     particle_filter = ParticleFilter(num_particles, space_constraints, motion_model, measurement_model)
     particle_filter.update(points)
     particle_filter_point = particle_filter.get_most_likely_particle()
-    # particle filter given none ?
-    if particle_filter_point != None:
-        particle_filter_point = np.array([particle_filter_point['x'],particle_filter_point['y'],particle_filter_point['z']])
-        #kalman_filter_point = kf.estimate()
-        print("particle filter ",particle_filter_point)
-        return [particle_filter_point]#[mean_point]#, min_sum_point,particle_filter_point]#, kalman_filter_point
-    else:
-        return  [[10,10,10]]#[mean_point, min_sum_point] 
+    particle_filter_point = np.array([particle_filter_point['x'],particle_filter_point['y'],particle_filter_point['z']])
+    return [particle_filter_point,mean_point, min_sum_point]
 # Step 3: Mean of Single Points
 def mean_of_single_points(points):
     print(points)
     return np.mean(points, axis=0)
 
-def create_cdf(data, filename):
+def create_cdf_and_json(data, filename, json_filename):
     # Create CDF
     a = np.array(data)
     num_bins = 20
-    counts, bin_edges = np.histogram(a, bins=num_bins, normed=True)
+    counts, bin_edges = np.histogram(a, bins=num_bins, density=True)
     cdf = np.cumsum(counts)
+    # Generate the JSON file
+    json_data = {}
+    for i in range(len(bin_edges)-1):
+        json_data[f"{cdf[i]*100}% of the data is below"] = f"{bin_edges[i+1]} meters"
+    with open(json_filename, 'w') as json_file:
+        json.dump(json_data, json_file, indent=4)
+    # Plot and save the CDF
     plt.plot(bin_edges[1:], cdf)
     plt.savefig(filename)
 
@@ -209,52 +176,77 @@ def main():
             return x / 1.16 - 0.63
         else:
             return x
-    diff = []
+    diff_min = []
+    diff_mean = []
+    diff_particle = []
+    diff_all = []
+    diff_algorithm = []
     # Loop over all experiments
     for exp in range(1, 45):  # Assuming there are 10 experiments
+        try:
+            gt=mobile_location_dict[f'EXP_{exp}']
+            gt={'x':gt[0],'y':gt[1],'z':gt[2]}
+            print("working on ",exp)
+            # Filter measurements for the current experiment
+            filtered_dict = {
+                k: [obj for obj in v if obj.exp == f'EXP_{exp}'] for k, v in measurements_dict.items()
+            }
+            # Calculate average distances for the current experiment
+            averages_dict = {
+                k: statistics.mean([bias(obj.distance) for obj in v])
+                for k, v in filtered_dict.items()
+            }
 
-        gt=mobile_location_dict[f'EXP_{exp}']
-        gt={'x':gt[0],'y':gt[1],'z':gt[2]}
-        print("working on ",exp)
-        # Filter measurements for the current experiment
-        filtered_dict = {
-            k: [obj for obj in v if obj.exp == f'EXP_{exp}'] for k, v in measurements_dict.items()
-        }
-        # Calculate average distances for the current experiment
-        averages_dict = {
-            k: statistics.mean([bias(obj.distance) for obj in v])
-            for k, v in filtered_dict.items()
-        }
+            averages_dict = {
+                k: 
+                Measurement(
+                        v[0].timestamp,
+                        v[0].bssid,
+                        statistics.mean([bias(obj.distance) for obj in v]),
+                        0,
+                        v[0].ap_location
+                        )
+                for k, v in filtered_dict.items()
+            }
+            np_array_to_dict = lambda position : {'x':position[0],'y':position[1],'z':position[2]}
+       
+            # Generate subgroups
+            subgroup_list = Util.generate_subgroups(4, arr=list(averages_dict.keys()))
 
-        averages_dict = {
-            k: 
-            Measurement(
-                    v[0].timestamp,
-                    v[0].bssid,
-                    statistics.mean([bias(obj.distance) for obj in v]),
-                    0,
-                    v[0].ap_location
-                    )
-            for k, v in filtered_dict.items()
-        }
-        # Generate subgroups
-        subgroup_list = Util.generate_subgroups(len(averages_dict.keys()), arr=list(averages_dict.keys()))
+            # Step 1
+            positions = distance_to_position(averages_dict, initial_position, gradient_descent,subgroup_list)
 
-        # Step 1
-        positions = distance_to_position(averages_dict, initial_position, gradient_descent,subgroup_list)
+            # Step 2
+            single_points = constellation_to_single_point(positions)
 
-        # Step 2
-        #single_points = constellation_to_single_point(positions)
+            # Step 3
+            final_position = np_array_to_dict(mean_of_single_points(single_points))
 
-        # Step 3
-        # final_position = mean_of_single_points(single_points)
-        # final_position = {'x':final_position[0],'y':final_position[1],'z':final_position[2]}
-        final_position = positions[0]
-        df =Util.calculate_distance(gt,final_position)
-        print('df',df)
-        print('final position vs gt ',final_position,gt)
-        diff.append(df)
-    Util.create_cdf_plot(diff, 'CDF_all.png')
+
+            position_mean = np_array_to_dict(single_points[1])
+            position_min = np_array_to_dict(single_points[2])
+            position_pf = np_array_to_dict(single_points[0])
+            diff_min.append(Util.calculate_distance(gt,position_min))
+            diff_mean.append(Util.calculate_distance(gt,position_mean))
+            diff_algorithm.append(Util.calculate_distance(gt,final_position))
+            diff_particle.append(Util.calculate_distance(gt,position_pf))
+
+
+           
+            subgroup_list = Util.generate_subgroups(len(averages_dict.keys()), arr=list(averages_dict.keys()))
+
+            # Step 1
+            positions = distance_to_position(averages_dict, initial_position, gradient_descent,subgroup_list)
+
+
+            diff_all.append(Util.calculate_distance(gt,positions[0]))
+        except:
+            print("Skipping")
+    create_cdf_and_json(diff_all, 'CDF_ALL.PNG', 'CDF_ALL.JSON')
+    create_cdf_and_json(diff_min, 'CDF_MIN.PNG', 'CDF_MIN.JSON')
+    create_cdf_and_json(diff_mean, 'CDF_MEAN.PNG', 'CDF_MEAN.JSON')
+    create_cdf_and_json(diff_particle, 'CDF_PARTICLE.PNG', 'CDF_PARTICLE.JSON')
+    create_cdf_and_json(diff_algorithm, 'CDF_ALGORITHM.PNG', 'CDF_ALGORITHM.JSON')
 if __name__ == "__main__":
     main()
 
