@@ -137,22 +137,23 @@ def constellation_to_single_point(points):
 def mean_of_single_points(points):
     print(points)
     return np.mean(points, axis=0)
+def plot_cdfs(data, labels):
+    assert len(data) == len(labels), "Data and labels must be of the same length"
+    
+    plt.figure()
 
-def create_cdf_and_json(data, filename, json_filename):
-    # Create CDF
-    a = np.array(data)
-    num_bins = 20
-    counts, bin_edges = np.histogram(a, bins=num_bins, density=True)
-    cdf = np.cumsum(counts)
-    # Generate the JSON file
-    json_data = {}
-    for i in range(len(bin_edges)-1):
-        json_data[f"{cdf[i]*100}% of the data is below"] = f"{bin_edges[i+1]} meters"
-    with open(json_filename, 'w') as json_file:
-        json.dump(json_data, json_file, indent=4)
-    # Plot and save the CDF
-    plt.plot(bin_edges[1:], cdf)
-    plt.savefig(filename)
+    for i in range(len(data)):
+        # Compute histogram and CDF
+        counts, bin_edges = np.histogram(data[i], bins=100, density=True)
+        cdf = np.cumsum(counts)
+
+        # Plot CDF
+        plt.plot(bin_edges[1:], cdf, label=labels[i])
+
+    # Add legend, grid and show the plot
+    plt.legend(loc='upper left')
+    plt.grid(True)
+    plt.show()
 
 def main():
     # Prompt user for technology choice
@@ -242,11 +243,16 @@ def main():
             diff_all.append(Util.calculate_distance(gt,positions[0]))
         except:
             print("Skipping")
-    create_cdf_and_json(diff_all, 'CDF_ALL.PNG', 'CDF_ALL.JSON')
-    create_cdf_and_json(diff_min, 'CDF_MIN.PNG', 'CDF_MIN.JSON')
-    create_cdf_and_json(diff_mean, 'CDF_MEAN.PNG', 'CDF_MEAN.JSON')
-    create_cdf_and_json(diff_particle, 'CDF_PARTICLE.PNG', 'CDF_PARTICLE.JSON')
-    create_cdf_and_json(diff_algorithm, 'CDF_ALGORITHM.PNG', 'CDF_ALGORITHM.JSON')
+    plot_cdfs([diff_all, 
+               diff_algorithm,
+               diff_particle,
+               diff_mean,
+               diff_min], 
+              ["all",
+               "algorithm",
+               "particle_filter",
+               "mean_cluster",
+               "min_point"])
 if __name__ == "__main__":
     main()
 
