@@ -144,8 +144,9 @@ def plot_cdfs(data, labels):
 
     for i in range(len(data)):
         # Compute histogram and CDF
-        counts, bin_edges = np.histogram(data[i], bins=100, density=True)
+        counts, bin_edges = np.histogram(data[i], bins=100)
         cdf = np.cumsum(counts)
+        cdf = cdf / cdf[-1]  # Normalize the CDF
 
         # Plot CDF
         plt.plot(bin_edges[1:], cdf, label=labels[i])
@@ -153,7 +154,7 @@ def plot_cdfs(data, labels):
     # Add legend, grid and show the plot
     plt.legend(loc='upper left')
     plt.grid(True)
-    plt.savefig("CDF_LAST.PNG")
+    plt.savefig("CDF_LAST_NORMALIZED.PNG")
 
 def main():
     # Prompt user for technology choice
