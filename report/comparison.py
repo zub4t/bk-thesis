@@ -13,6 +13,7 @@ from scipy.spatial import distance
 from scipy.stats import cumfreq
 from sklearn.preprocessing import MinMaxScaler
 
+from scipy.optimize import minimize
 cwd = os.getcwd()
 sys.path.insert(0, os.path.join(cwd, "../classes"))
 sys.path.insert(0, os.path.join(cwd, "../commons"))
@@ -90,6 +91,25 @@ class ParticleFilter:
 
         return most_likely_particle
 
+def place_points_in_constraints(points, space_constraints):
+    for point in points:
+        if point['x'] < space_constraints['x_min']:
+            point['x'] = space_constraints['x_min']
+        elif point['x'] > space_constraints['x_max']:
+            point['x'] = space_constraints['x_max']
+
+        if point['y'] < space_constraints['y_min']:
+            point['y'] = space_constraints['y_min']
+        elif point['y'] > space_constraints['y_max']:
+            point['y'] = space_constraints['y_max']
+
+        if point['z'] < space_constraints['z_min']:
+            point['z'] = space_constraints['z_min']
+        elif point['z'] > space_constraints['z_max']:
+            point['z'] = space_constraints['z_max']
+    return points
+
+
 # Step 1: From Distance Measurements To Position
 def distance_to_position(averages_dict, initial_position, gradient_descent, subgroup_list):
     positions = []
@@ -102,6 +122,23 @@ def distance_to_position(averages_dict, initial_position, gradient_descent, subg
 
 # Step 2: From A Constellation Of Points To A Single One
 def constellation_to_single_point(points):
+
+
+    space_constraints = {'x_min': 0, 'x_max': 10, 'y_min': 0, 'y_max': 6, 'z_min': 0, 'z_max': 4}
+    points = place_points_in_constraints(points,space_constraints)
+# Define the cost function
+    def cost_func(x, points):
+        total_distance = 0
+        for point in points:
+            total_distance += np.sqrt((x[0] - point['x'])**2 + (x[1] - point['y'])**2 + (x[2] - point['z'])**2)
+        return total_distance
+
+
+    # Initial guess for the 'x' and 'y' coordinates of the center
+    x0 = np.array([0, 0, 0])
+
+    # Call the minimize function
+    point_gd = minimize(cost_func, x0, args=(points), method='Nelder-Mead')
     # DBSCAN Clustering and Mean Calculation
     # Convert list of dictionaries to 2D array
     points_2d = np.array([[point['x'], point['y'], point['z']] for point in points])
@@ -126,13 +163,12 @@ def constellation_to_single_point(points):
         return likelihood
 
     num_particles = 10000
-    space_constraints = {'x_min': 0, 'x_max': 10, 'y_min': 0, 'y_max': 6, 'z_min': 0, 'z_max': 4}
     motion_model = {'velocity_x': 0, 'velocity_y': 0, 'velocity_z': 0}
     particle_filter = ParticleFilter(num_particles, space_constraints, motion_model, measurement_model)
     particle_filter.update(points)
     particle_filter_point = particle_filter.get_most_likely_particle()
     particle_filter_point = np.array([particle_filter_point['x'],particle_filter_point['y'],particle_filter_point['z']])
-    return [particle_filter_point,mean_point, min_sum_point]
+    return [particle_filter_point,mean_point, min_sum_point,point_gd.x]
 # Step 3: Mean of Single Points
 def mean_of_single_points(points):
     print(points)
@@ -183,6 +219,7 @@ def main():
     diff_particle = []
     diff_all = []
     diff_algorithm = []
+    diff_gd  = []
     # Loop over all experiments
     for exp in range(1, 45):  # Assuming there are 10 experiments
         try:
@@ -228,11 +265,12 @@ def main():
             position_mean = np_array_to_dict(single_points[1])
             position_min = np_array_to_dict(single_points[2])
             position_pf = np_array_to_dict(single_points[0])
+            position_gd = np_array_to_dict(single_points[3]) 
             diff_min.append(Util.calculate_distance(gt,position_min))
             diff_mean.append(Util.calculate_distance(gt,position_mean))
             diff_algorithm.append(Util.calculate_distance(gt,final_position))
             diff_particle.append(Util.calculate_distance(gt,position_pf))
-
+            diff_gd.append(Util.calculate_distance(gt,position_gd))
 
            
             subgroup_list = Util.generate_subgroups(len(averages_dict.keys()), arr=list(averages_dict.keys()))
@@ -248,12 +286,14 @@ def main():
                diff_algorithm,
                diff_particle,
                diff_mean,
-               diff_min], 
+               diff_min,
+               diff_gd], 
               ["all",
                "algorithm",
                "particle_filter",
                "mean_cluster",
-               "min_point"])
+               "min_point",
+               "gd"])
 if __name__ == "__main__":
     main()
 
