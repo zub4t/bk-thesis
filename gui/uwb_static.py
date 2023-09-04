@@ -100,11 +100,11 @@ def plot():
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     for i, point in enumerate(all_pos):
-        if cl[i] != -1:
+        if cl[i] != -2:
             if(not is_2D.get()):
-                ax.scatter(point["x"], point["y"], point["z"], c=colors[cl[i]], marker="x")
+                ax.scatter(point["x"], point["y"], point["z"], c='green', marker="x")
             else:
-                ax.scatter(point["x"], point["y"],s=50, c=colors[cl[i]], marker="x")
+                ax.scatter(point["x"], point["y"],s=50, c='green', marker="x")
     if(not is_2D):
         ax.scatter(
             mobile_location_dict[exp][0],
@@ -140,14 +140,14 @@ def plot():
     q1_point = {'x': np.percentile(x, 25), 'y': np.percentile(y, 25), 'z': np.percentile(z, 25)}
     q2_point = {'x': np.percentile(x, 50), 'y': np.percentile(y, 50), 'z': np.percentile(z, 50)}
     q3_point = {'x': np.percentile(x, 75), 'y': np.percentile(y, 75), 'z': np.percentile(z, 75)}
-    if(not is_2D):
-        ax.scatter(q1_point["x"], q1_point["y"], q1_point["z"], c='r', marker="o")
-        ax.scatter(q2_point["x"], q2_point["y"], q2_point["z"], c='pink', marker="o")
-        ax.scatter(q3_point["x"], q3_point["y"], q3_point["z"], c='blue', marker="o")
-    else:
-        ax.scatter(q1_point["x"], q1_point["y"], c='r', marker="o")
-        ax.scatter(q2_point["x"], q2_point["y"], c='pink', marker="o")
-        ax.scatter(q3_point["x"], q3_point["y"], c='blue', marker="o")
+    # if(not is_2D):
+    #     ax.scatter(q1_point["x"], q1_point["y"], q1_point["z"], c='r', marker="o")
+    #     ax.scatter(q2_point["x"], q2_point["y"], q2_point["z"], c='pink', marker="o")
+    #     ax.scatter(q3_point["x"], q3_point["y"], q3_point["z"], c='blue', marker="o")
+    # else:
+    #     ax.scatter(q1_point["x"], q1_point["y"], c='r', marker="o")
+    #     ax.scatter(q2_point["x"], q2_point["y"], c='pink', marker="o")
+    #     ax.scatter(q3_point["x"], q3_point["y"], c='blue', marker="o")
     std_dev = {'x': np.std(x), 'y': np.std(y), 'z': np.std(z)}
 # print the results
     print(f"Mean point: {mean_point}")

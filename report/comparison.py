@@ -283,14 +283,10 @@ def main():
         except:
             print("Skipping")
     plot_cdfs([diff_all, 
-               diff_algorithm,
-               diff_particle,
                diff_mean,
                diff_min,
                diff_gd], 
               ["all",
-               "algorithm",
-               "particle_filter",
                "mean_cluster",
                "min_point",
                "gd"])

@@ -31,10 +31,20 @@ class WiFiPathPlotter:
         self.gradient_descent = GradientDescent(
             learning_rate=0.01, max_iterations=1000, tolerance=1e-5
         )
-        self.bias = lambda x: x / 1.16 - 0.63
-
+        self.bias = lambda x: x
+        self.fig.clf()
+        real_person_path = Util.interpolate_points(Measurement.points_exp, 20)
+        self.ax = self.fig.add_subplot(111)
+        self.ax.set_xlim([-1, 10])
+        self.ax.set_ylim([-5, 10])
+        self.ax.set_xlabel("X")
+        self.ax.set_ylabel("Y")
+        x = [point["x"] for point in real_person_path]
+        y = [point["y"] for point in real_person_path]
+        self.ax.scatter(x, y, c="r",s=5, marker="o")
+        self.subgroup_points = {}
     def process(self, subgroup_size, exp):
-        measurements_dict, mobile_location_dict = Util.read_json_file("../JSON/file.json", "802.11mc")
+        measurements_dict, mobile_location_dict = Util.read_json_file("../JSON/file.json", "uwb")
         filtered_dict = {
             k: [obj for obj in v if obj.exp == exp] for k, v in measurements_dict.items() if any(obj.exp == exp for obj in v)
         }
@@ -44,24 +54,26 @@ class WiFiPathPlotter:
         return filtered_dict, subgroup_list, sampled_list
 
     def plot(self):
-        self.fig.clf()
-        ax = self.fig.add_subplot(111)
-        ax.set_xlim([-1, 10])
-        ax.set_ylim([-5, 10])
-        ax.set_xlabel("X")
-        ax.set_ylabel("Y")
-        real_person_path = Util.interpolate_points(Measurement.points_exp, 20)
-        x = [point["x"] for point in real_person_path]
-        y = [point["y"] for point in real_person_path]
-        ax.scatter(x, y, c="r", marker="o")
         measurement_buckets = Util.bucket_measurements(self.filtered_dict, 1000)
-        print(measurement_buckets)
+        print(self.index)
         try:
             measurements = next(measurement_buckets)
-            self.process_measurements(measurements, ax)
+            self.process_measurements(measurements, self.ax)
         except StopIteration:
             print("No more data")
-        self.plot()
+        if(self.index==140):
+            
+            key = random.choice(list(self.subgroup_points.keys()))
+            #for key in self.subgroup_points:
+            x = [point["x"] for point in self.subgroup_points[key]]
+            y = [point["y"] for point in self.subgroup_points[key]]
+            self.ax.plot(x, y, marker="x", c=self.colors[key])
+            self.canvas.draw()
+            filename = "plots_comparison/plot_{}.png".format(self.index)
+            self.fig.savefig(filename)
+        else:
+            self.index += 1
+            self.plot()
 
     def process_measurements(self, measurements, ax):
         for key, measurement in measurements.items():
@@ -84,15 +96,14 @@ class WiFiPathPlotter:
                     include_point = False
             if include_point:
                 position = self.gradient_descent.train(subgroup_measurements, {"x": 0, "y": 0, "z": 0})
-                ax.scatter(position['x'], position['y'], s=20, c=self.colors[subgroup], marker="x")
-                all_gt = [x.ground_truth for x in subgroup_measurements]
-                for gt in all_gt:
-                    ax.scatter(gt['x'], gt['y'], s=20, c='b', marker="o")
+                #ax.scatter(position['x'], position['y'], s=20, c=self.colors[subgroup], marker="x")
+                if( not subgroup in  self.subgroup_points):
+                    self.subgroup_points[subgroup] = []
+                self.subgroup_points[subgroup].append(position)
+                # all_gt = [x.ground_truth for x in subgroup_measurements]
+                # for gt in all_gt:
+                #     ax.scatter(gt['x'], gt['y'], s=5, c='b', marker="o")
 
-        self.index += 1
-        self.canvas.draw()
-        filename = "plots_comparison/plot_{}.png".format(self.index)
-        self.fig.savefig(filename)
 
 if __name__ == "__main__":
     root = tk.Tk()
@@ -105,7 +116,7 @@ if __name__ == "__main__":
     controls_frame = tk.Frame(root)
     controls_frame.pack(side=tk.BOTTOM)
     entry_exp = tk.Entry(controls_frame)
-    entry_exp.insert(0, "EXP_73")
+    entry_exp.insert(0, "EXP_56")
     entry_exp.pack(side=tk.LEFT)
     plotter = WiFiPathPlotter(root, fig, canvas, controls_frame, entry_exp)
     button = tk.Button(controls_frame, text="Plot", command=plotter.plot)
